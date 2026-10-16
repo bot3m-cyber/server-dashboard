@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Server-Dashboard</title>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <button id="navToggle" class="btn nav-toggle" type="button" aria-expanded="false" aria-controls="tabs"><span aria-hidden="true">☰</span> <span id="navCurrent">Menü</span></button>
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <div class="title">Server-Dashboard</div>
+        <div class="subtitle" id="packName">Kein Modpack eingerichtet</div>
+      </div>
+    </div>
+    <div class="controls">
+      <div id="userMenu" class="user-menu" hidden></div>
+      <button id="btnAppearance" class="btn icon-btn" title="Aussehen anpassen" aria-label="Aussehen anpassen"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg><span>Aussehen</span></button>
+      <span id="statusPill" class="pill off" role="status">Aus</span>
+      <button id="btnStart" class="btn primary">Start</button>
+      <button id="btnStop" class="btn">Stopp</button>
+      <button id="btnRestart" class="btn">Neustart</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Bereiche">
+    <div class="nav-label">Start</div>
+    <button data-tab="home"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#home"/></svg> Übersicht</button>
+    <button data-tab="servers"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#servers"/></svg> Meine Server</button>
+    <div class="nav-label">Betrieb</div>
+    <button data-tab="console"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#console"/></svg> Server &amp; Konsole</button>
+    <button data-tab="mods"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#mods"/></svg> Mods</button>
+    <button data-tab="players"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#players"/></svg> Spieler</button>
+    <button data-tab="backups"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#backups"/></svg> Backups</button>
+    <button data-tab="files"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#files"/></svg> Dateien</button>
+    <button data-tab="auto"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#auto"/></svg> Automatik</button>
+    <div class="nav-label">Verbinden</div>
+    <button data-tab="invite"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#invite"/></svg> Freunde einladen</button>
+    <button data-tab="bedrock"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#bedrock"/></svg> Bedrock</button>
+    <button data-tab="cloud" class="local-only"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#cloud"/></svg> Cloud</button>
+    <div class="nav-label">Mehr</div>
+    <button data-tab="settings"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg> Einstellungen</button>
+    <button data-tab="setup"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#setup"/></svg> Einrichtung</button>
+    <button data-tab="help"><svg class="ni" aria-hidden="true"><use href="assets/icons.svg#info"/></svg> Anleitung</button>
+  </nav>
+
+  <div id="connLost" class="banner error" hidden>Keine Verbindung zum Dashboard. Läuft das Fenster mit start.bat noch? Es wird automatisch neu verbunden …</div>
+
+  <section id="jobPanel" class="card job" hidden>
+    <div class="job-head">
+      <h3 id="jobTitle">Aufgabe</h3>
+      <button id="jobClose" class="btn small ghost" hidden>Schließen</button>
+    </div>
+    <div class="progress"><div id="jobBar"></div></div>
+    <div id="jobText" class="muted small"></div>
+    <div id="jobError" class="banner error" hidden></div>
+    <details id="jobDetails">
+      <summary>Protokoll anzeigen</summary>
+      <pre id="jobLog" class="log small"></pre>
+    </details>
+  </section>
+
+  <main>
+    <!-- ======================================================= Übersicht -->
+    <section id="tab-home" class="tab" hidden>
+      <div class="hero card" id="hero">
+        <div class="hero-status">
+          <div id="heroDot" class="dot off"></div>
+          <div>
+            <div id="heroState" class="hero-state">Server ist aus</div>
+            <div id="heroSub" class="muted">Bereit zum Starten</div>
+          </div>
+        </div>
+        <button id="heroBtn" class="btn hero-btn">▶ SERVER STARTEN</button>
+        <div class="hero-secondary" id="heroSecondary" hidden>
+          <button id="heroStop" class="btn">■ Stoppen</button>
+          <button id="heroRestart" class="btn">↻ Neustart</button>
+        </div>
+      </div>
+
+      <div class="tiles">
+        <div class="tile"><div class="tile-label">Laufzeit</div><div class="tile-value" id="tileUptime">–</div><div class="small muted" id="tileUptimeSub"></div></div>
+        <div class="tile"><div class="tile-label">Server-Tempo (TPS)</div><div class="tile-value" id="tileTps">–</div><div class="small muted" id="tileTpsSub"></div></div>
+        <div class="tile"><div class="tile-label">Arbeitsspeicher</div><div class="tile-value" id="tileMem">–</div>
+          <svg class="spark" id="sparkMem" viewBox="0 0 120 32" preserveAspectRatio="none"></svg><div class="small muted" id="tileMemSub"></div></div>
+        <div class="tile"><div class="tile-label">Spieler online</div><div class="tile-value" id="tilePlayers">–</div>
+          <svg class="spark" id="sparkPlayers" viewBox="0 0 120 32" preserveAspectRatio="none"></svg><div class="small muted" id="tilePlayerNames"></div></div>
+      </div>
+
+      <div class="quick">
+        <button class="btn" id="qBackup"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#save"/></svg> Welt sichern</button>
+        <button class="btn" id="qMods"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#mods"/></svg> Mod hinzufügen</button>
+        <button class="btn" id="qConsole"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#console"/></svg> Konsole öffnen</button>
+        <button class="btn" id="qInvite"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#players"/></svg> Freunde einladen</button>
+        <button class="btn ghost" id="qPalette" title="Befehlspalette (Strg+K)">⌘ Strg+K</button>
+      </div>
+
+      <div class="home-grid">
+        <div class="col">
+          <div class="card">
+            <h2>Serverliste <span class="muted small">so sehen es Spieler</span></h2>
+            <div class="slp">
+              <div class="slp-icon"><img id="slpIcon" alt=""></div>
+              <div class="slp-body"><div class="slp-motd" id="slpMotd"></div><div class="slp-ver muted small" id="slpVer"></div></div>
+              <div class="slp-right"><div id="slpCount" class="mono">–</div><div class="slp-bars" id="slpBars"><i></i><i></i><i></i><i></i><i></i></div></div>
+            </div>
+            <div class="row">
+              <label class="btn small"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#image"/></svg> Server-Icon ändern<input type="file" id="iconFile" accept="image/png" hidden></label>
+              <span class="muted small">PNG, genau 64 × 64 Pixel</span>
+            </div>
+            <div class="addr-row"><span class="muted small">Adresse im WLAN</span><b class="mono" id="tileAddr">–</b><button class="btn small ghost" id="btnCopyAddr">Kopieren</button></div>
+          </div>
+          <div class="card">
+            <h2>Spieler online <span id="homePlayerCount" class="muted small"></span></h2>
+            <ul id="homePlayers" class="players-grid"></ul>
+          </div>
+          <div class="card">
+            <h2>Aktivität</h2>
+            <ul id="activityFeed" class="feed"></ul>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card term-card">
+            <h2>Terminal <span class="live-dot" title="Live"></span></h2>
+            <div id="miniConsole" class="log mini-console"></div>
+            <form id="miniCmdForm" class="row cmd">
+              <input id="miniCmd" type="text" autocomplete="off" spellcheck="false" placeholder="Befehl eingeben …">
+              <button class="btn primary" type="submit">Senden</button>
+            </form>
+            <div class="chips-row" id="cmdChips"></div>
+          </div>
+          <div class="card">
+            <h2>Schnellaktionen</h2>
+            <div class="qa-grid" id="quickActions"></div>
+            <form id="sayForm" class="row">
+              <input id="sayInput" type="text" maxlength="200" placeholder="Nachricht an alle Spieler …">
+              <button class="btn" type="submit">📢 Senden</button>
+            </form>
+          </div>
+          <div class="card">
+            <h2>Welt &amp; System</h2>
+            <dl class="kv" id="worldInfo"></dl>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= Dateien -->
+    <section id="tab-files" class="tab" hidden>
+      <h1>Dateien</h1>
+      <div class="card">
+        <div class="fm-bar">
+          <div id="fmCrumbs" class="crumbs"></div>
+          <div class="row">
+            <button id="fmUp" class="btn small">↑ Nach oben</button>
+            <button id="fmNewDir" class="btn small">📁 Neuer Ordner</button>
+            <label class="btn small">⬆ Hochladen<input id="fmUpload" type="file" multiple hidden></label>
+            <button id="fmRefresh" class="btn small ghost" title="Aktualisieren">↻</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="fm">
+            <thead><tr><th></th><th>Name</th><th class="right hide-sm">Größe</th><th class="hide-sm">Geändert</th><th></th></tr></thead>
+            <tbody id="fmBody"></tbody>
+          </table>
+        </div>
+        <p class="muted small">Alles liegt im Server-Ordner. Textdateien (Konfigurationen, Logs) kannst du direkt bearbeiten. Tipp: Ordner <span class="mono">logs</span> für Protokolle, <span class="mono">config</span> für Einstellungen der Mods.</p>
+      </div>
+      <div class="card" id="fmEditor" hidden>
+        <div class="row space">
+          <h2 id="fmEditName">Datei</h2>
+          <div class="row"><button id="fmSave" class="btn primary">Speichern</button><button id="fmClose" class="btn ghost">Schließen</button></div>
+        </div>
+        <div id="fmRunning" class="banner warn small" hidden>Der Server läuft. Änderungen an Konfigurationen gelten meist erst nach einem Neustart.</div>
+        <textarea id="fmText" rows="22" spellcheck="false"></textarea>
+      </div>
+    </section>
+
+    <!-- ======================================================= Automatik -->
+    <section id="tab-auto" class="tab" hidden>
+      <h1>Automatik</h1>
+      <div class="card">
+        <h2>Automatisch</h2>
+        <label class="checkline"><input type="checkbox" id="autoCrash"> Nach einem Absturz automatisch neu starten <span class="muted">(höchstens 3 Versuche in 15 Minuten)</span></label>
+        <label class="inline">Server automatisch stoppen, wenn niemand online ist, nach
+          <input id="autoStop" type="number" min="0" max="1440" style="width:6rem"> Minuten <span class="muted">(0 = aus)</span></label>
+        <div class="row"><button id="btnAutoSave" class="btn primary">Speichern</button></div>
+      </div>
+
+      <div class="card">
+        <h2>Zeitplan</h2>
+        <p class="muted small">Aufgaben, die sich selbst erledigen: nachts neu starten, Backups, Nachrichten an die Spieler und mehr.</p>
+        <ul id="schedList" class="plain-list"></ul>
+        <h3 class="mt">Neue Aufgabe</h3>
+        <form id="schedForm" class="form-grid">
+          <label>Name<input name="name" type="text" maxlength="40" placeholder="z. B. Nächtlicher Neustart" required></label>
+          <label>Aktion
+            <select name="type">
+              <option value="restart">Server neu starten</option><option value="backup">Welt sichern</option>
+              <option value="say">Nachricht an alle Spieler</option><option value="command">Befehl ausführen</option>
+              <option value="stop">Server stoppen</option><option value="start">Server starten</option>
+            </select>
+          </label>
+          <label>Wann
+            <select name="mode"><option value="daily">Jeden Tag um …</option><option value="interval">Alle … Minuten</option></select>
+          </label>
+          <label data-for="daily">Uhrzeit<input name="time" type="time" value="04:00"></label>
+          <label data-for="interval" hidden>Minuten<input name="everyMin" type="number" min="5" max="10080" value="60"></label>
+          <label data-for="text" hidden>Befehl oder Text<input name="command" type="text" maxlength="200" placeholder="z. B. Willkommen auf dem Server!"></label>
+          <label data-for="restart">Vorwarnung (Sekunden)<input name="warnSeconds" type="number" min="0" max="600" value="60"></label>
+          <div class="full"><button class="btn primary" type="submit">Aufgabe hinzufügen</button></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Discord-Benachrichtigungen</h2>
+        <p class="muted small">Schickt Meldungen in einen Discord-Kanal. Erstelle dazu in Discord unter <b>Kanal bearbeiten → Integrationen → Webhooks</b> einen Webhook und füge die Adresse hier ein. Sie bleibt nur auf diesem PC gespeichert.</p>
+        <div id="webhookState" class="small"></div>
+        <div class="row"><input id="webhookUrl" type="text" spellcheck="false" placeholder="https://discord.com/api/webhooks/…"></div>
+        <div class="row">
+          <label class="checkline"><input type="checkbox" id="wbStart"> Server gestartet</label>
+          <label class="checkline"><input type="checkbox" id="wbStop"> Server gestoppt</label>
+          <label class="checkline"><input type="checkbox" id="wbCrash"> Absturz</label>
+          <label class="checkline"><input type="checkbox" id="wbJoin"> Spieler beigetreten</label>
+        </div>
+        <div class="row">
+          <button id="btnWebhookSave" class="btn primary">Speichern</button>
+          <button id="btnWebhookTest" class="btn">Test-Nachricht senden</button>
+          <button id="btnWebhookRemove" class="btn ghost danger">Entfernen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= Cloud -->
+    <section id="tab-cloud" class="tab" hidden>
+      <h1>Cloud</h1>
+      <p class="lead">Speichere deine Server-Einstellungen in der Cloud, damit du sie auf jedem PC wiederfindest. Das Dashboard nutzt dafür einen Ordner, den deine Cloud-Software synchronisiert (OneDrive, Google Drive, Dropbox …). Es meldet sich bei keinem Cloud-Dienst selbst an.</p>
+      <div class="card">
+        <h2>Cloud-Ordner</h2>
+        <div id="cloudCandidates" class="chips-row"></div>
+        <div class="row">
+          <input id="cloudPath" type="text" spellcheck="false" placeholder="z. B. C:\Users\Name\OneDrive">
+          <button id="btnCloudSet" class="btn">Festlegen</button>
+          <button id="btnCloudOff" class="btn ghost">Entfernen</button>
+        </div>
+        <div id="cloudState" class="small"></div>
+      </div>
+      <div class="card">
+        <h2>Sichern</h2>
+        <p class="muted small">Gesichert werden pro Server: Einstellungen, <span class="mono">server.properties</span>, Whitelist, OPs, Bans, Konfigurationsdateien (config, kubejs, Plugin-Einstellungen) und bei Modpacks die Modpack-Daten. Mods selbst und die Webhook-Adresse bleiben draußen.</p>
+        <label class="checkline"><input type="checkbox" id="cloudBackups"> Auch das neueste Welt-Backup mitsichern <span class="muted">(kann groß sein)</span></label>
+        <div class="row">
+          <button id="btnCloudPush" class="btn primary">☁ Alle Server jetzt sichern</button>
+          <button id="btnCloudPushOne" class="btn">Nur diesen Server</button>
+        </div>
+        <div class="row">
+          <label class="inline">Automatisch sichern:
+            <select id="cloudAuto">
+              <option value="0">Aus</option><option value="30">alle 30 Minuten</option><option value="60">stündlich</option>
+              <option value="360">alle 6 Stunden</option><option value="1440">täglich</option>
+            </select>
+          </label>
+          <button id="btnCloudAuto" class="btn">Speichern</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Server in der Cloud</h2>
+        <p class="muted small">Alle Server, die in deinem Cloud-Ordner liegen, auch von anderen PCs. „Auf diesen PC holen“ legt einen neuen Server mit den gesicherten Einstellungen an. Mods oder Server-Datei lädt die Einrichtung danach frisch herunter.</p>
+        <ul id="cloudServers" class="plain-list"></ul>
+      </div>
+    </section>
+
+    <!-- ======================================================= Meine Server -->
+
+    <section id="tab-servers" class="tab" hidden>
+      <h1>Meine Server</h1>
+      <p class="lead">Jeder Server hat eigene Welt, Einstellungen und Mods oder Plugins. Es läuft immer ein Server gleichzeitig. Zum Wechseln den laufenden Server erst stoppen.</p>
+      <div id="serverCards" class="server-cards"></div>
+
+      <div class="card" id="presetCard">
+        <h2><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#spark"/></svg> Server-Presets <span class="muted small">ein Klick, alles fertig</span></h2>
+        <p class="muted small">Fertige Zusammenstellungen: Server, passende Plugins oder Mods und Einstellungen werden automatisch installiert. Du musst danach nur noch starten.</p>
+        <div id="presetCards" class="type-cards"></div>
+        <form id="presetForm" class="info-box" hidden>
+          <h3 id="presetTitle"></h3>
+          <p id="presetDesc" class="muted small"></p>
+          <div class="muted small" id="presetKind">Wird installiert:</div>
+          <div id="presetContent" class="chips-row"></div>
+          <div class="form-grid mt">
+            <label>Name<input id="psName" type="text" maxlength="40" required></label>
+            <label>Minecraft-Version
+              <select id="psVersion"></select>
+              <span id="psVersionHint" class="small muted"></span>
+            </label>
+            <label>Arbeitsspeicher
+              <select id="psRam"><option value="2">2 GB</option><option value="4">4 GB</option><option value="6">6 GB</option><option value="8">8 GB</option><option value="12">12 GB</option><option value="16">16 GB</option></select>
+            </label>
+            <label class="checkline switch-line"><input type="checkbox" id="psBedrock" role="switch">
+              <span><b>Bedrock-Support</b> (Geyser + Floodgate)<br><span class="muted small">Auch Spieler mit Handy, Windows-App, Nintendo Switch, Xbox und PlayStation können mitspielen, ohne Java-Account. Wird passend zum Server-Typ installiert.</span></span>
+            </label>
+            <label class="checkline"><input type="checkbox" id="psEula"> Ich stimme der <a href="https://aka.ms/MinecraftEULA" target="_blank" rel="noopener">Minecraft-EULA</a> zu.</label>
+            <div class="full"><button class="btn primary" type="submit" id="psSubmit">Preset installieren</button></div>
+          </div>
+        </form>
+      </div>
+
+      <div class="card local-only" id="adoptCard">
+        <h2><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#files"/></svg> Vorhandenen Server übernehmen</h2>
+        <p class="muted small">Verbindet einen schon eingerichteten Server-Ordner mit dem Dashboard. Es werden keine Dateien verändert.</p>
+        <div class="row">
+          <input id="adoptPath" type="text" spellcheck="false" placeholder="C:\Users\Name\…\server">
+          <button id="btnAdoptDetect" class="btn">Prüfen</button>
+        </div>
+        <div id="adoptInfo" class="info" hidden></div>
+        <div class="row" id="adoptRow" hidden>
+          <input id="adoptName" type="text" maxlength="40" placeholder="Name">
+          <button id="btnAdopt" class="btn primary">Übernehmen</button>
+        </div>
+      </div>
+
+      <div class="card" id="newServerCard">
+        <h2><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#servers"/></svg> Neuen Server anlegen</h2>
+        <p class="muted small">Wähle zuerst, was für ein Server es werden soll. <b>Plugins</b> gibt es bei Paper und Purpur, <b>Mods</b> bei Fabric, NeoForge und Modpacks.</p>
+        <div id="typeCards" class="type-cards"></div>
+        <div id="mpBox" class="info-box" hidden>
+          <h3>📦 Modpacks durchstöbern <span id="mpCount" class="muted small"></span></h3>
+          <p class="muted small">Wähle ein Modpack und klicke auf „Als Server installieren“. Alles läuft automatisch: Modpack einlesen, Mods laden, NeoForge einrichten und Client-Mods aussortieren. Name, RAM und EULA nimmst du aus dem Formular darunter.</p>
+          <form id="mpSearchForm" class="mp-bar">
+            <input id="mpSearch" type="search" placeholder="Modpacks suchen (leer lassen zum Durchstöbern) …" spellcheck="false">
+            <select id="mpSort" aria-label="Sortierung"></select>
+            <select id="mpSource" aria-label="Quelle"><option value="modrinth">Modrinth</option><option value="curseforge">CurseForge</option></select>
+          </form>
+          <div id="mpCfKey" class="info" hidden>
+            <b>CurseForge braucht einen kostenlosen Schlüssel.</b> Hol dir einen bei
+            <a href="https://console.curseforge.com/" target="_blank" rel="noopener">console.curseforge.com</a>
+            (Anmelden, „API Keys“) und füge ihn hier ein. Er bleibt nur auf diesem PC.
+            <div class="row"><input id="cfKey" type="password" autocomplete="off" spellcheck="false" placeholder="CurseForge-API-Schlüssel"><button id="btnCfKeySave" class="btn" type="button">Speichern</button></div>
+          </div>
+          <ul id="mpResults" class="results"></ul>
+          <div class="row"><button id="mpMore" class="btn" type="button" hidden>Mehr laden</button></div>
+          <p class="muted small">Es werden Modpacks für NeoForge gezeigt. Bei CurseForge kannst du stöbern, die Direkt-Installation gibt es dort noch nicht: Viele Mods dort dürfen nicht von anderen Programmen geladen werden. Der Knopf öffnet die CurseForge-Seite.</p>
+        </div>
+        <form id="newServerForm" class="form-grid" hidden>
+          <label>Name<input id="nsName" type="text" maxlength="40" required></label>
+          <label id="nsVersionLabel">Minecraft-Version
+            <select id="nsVersion"></select>
+          </label>
+          <label class="checkline" id="nsSnapLabel"><input type="checkbox" id="nsSnapshots"> auch Test-Versionen (Snapshots, Release-Candidates) zeigen</label>
+          <label>Arbeitsspeicher
+            <select id="nsRam"><option value="2">2 GB</option><option value="4">4 GB</option><option value="6" selected>6 GB</option><option value="8">8 GB</option><option value="12">12 GB</option><option value="16">16 GB</option></select>
+          </label>
+          <label class="checkline" id="nsEulaLabel"><input type="checkbox" id="nsEula"> Ich stimme der <a href="https://aka.ms/MinecraftEULA" target="_blank" rel="noopener">Minecraft-EULA</a> zu.</label>
+          <div class="full"><button class="btn primary" type="submit" id="nsSubmit">Server anlegen</button></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ======================================================= Einrichtung -->
+    <section id="tab-setup" class="tab" hidden>
+      <h1>Einrichtung</h1>
+      <p class="lead">In vier Schritten zum eigenen Server. Erledigte Schritte bekommen einen grünen Haken.</p>
+
+      <article class="card step" id="stepPlain" hidden>
+        <h2><span class="num">1</span> Server installieren <span class="check" aria-hidden="true"></span></h2>
+        <p id="plainInfo"></p>
+        <div class="row">
+          <button id="btnPlainInstall" class="btn primary">Installieren</button>
+        </div>
+        <details>
+          <summary>Minecraft-Version wechseln</summary>
+          <p class="muted small">Vor dem Wechsel wird die Welt automatisch gesichert. Auf eine ältere Version zurückzugehen kann Welten beschädigen.</p>
+          <div class="row">
+            <select id="upgradeVersion"></select>
+            <label class="checkline small"><input type="checkbox" id="upgradeSnapshots"> auch Test-Versionen</label>
+            <button id="btnUpgrade" class="btn">Version wechseln</button>
+          </div>
+        </details>
+      </article>
+
+      <article class="card step" id="step1">
+        <h2><span class="num">1</span> Modpack auswählen <span class="check" aria-hidden="true"></span></h2>
+        <p>Wähle deine <b>.mrpack</b>-Datei von Modrinth aus, zum Beispiel aus dem Download-Ordner.</p>
+        <div class="row">
+          <label class="btn primary file">Datei auswählen …<input type="file" id="mrpackFile" accept=".mrpack" hidden></label>
+          <span id="uploadInfo" class="muted small"></span>
+        </div>
+        <div class="or">oder Pfad eingeben</div>
+        <div class="row">
+          <input id="mrpackPath" type="text" spellcheck="false" placeholder="C:\Users\Name\Downloads\Create Live 7 1.0.0.mrpack">
+          <button id="btnMrpackPath" class="btn">Pfad verwenden</button>
+        </div>
+        <div class="or">oder bei Modrinth suchen</div>
+        <form id="packSearchForm" class="row">
+          <input id="packSearch" type="search" placeholder="z. B. Create, Cobblemon, All the Mods …" spellcheck="false">
+          <button class="btn" type="submit">Suchen</button>
+        </form>
+        <ul id="packResults" class="results"></ul>
+        <div id="packUpdate" class="info" hidden></div>
+        <div id="packInfo" class="info" hidden></div>
+      </article>
+
+      <article class="card step" id="step2">
+        <h2><span class="num">2</span> Server-Ordner &amp; Mods <span class="check" aria-hidden="true"></span></h2>
+        <p class="local-only">In diesen Ordner kommt der Server. Ein leerer Ordner ist am besten.</p>
+        <div class="row local-only">
+          <input id="serverDir" type="text" spellcheck="false">
+          <button id="btnServerDir" class="btn">Ordner festlegen</button>
+        </div>
+        <label class="checkline"><input type="checkbox" id="skipClientOnly"> Reine Client-Mods (z.&nbsp;B. Sodium, Iris, Minimaps) automatisch deaktivieren <span class="muted">(empfohlen, laut Modrinth-Angaben)</span></label>
+        <div id="planInfo" class="info" hidden></div>
+        <details id="planDetails" hidden>
+          <summary>Welche Mods kommen nicht (aktiv) auf den Server?</summary>
+          <ul id="planList" class="plain-list small"></ul>
+        </details>
+        <div class="row">
+          <button id="btnDownload" class="btn primary">Mods herunterladen</button>
+        </div>
+      </article>
+
+      <article class="card step" id="step3">
+        <h2><span class="num">3</span> Java &amp; NeoForge <span class="check" aria-hidden="true"></span></h2>
+        <div id="javaInfo" class="info"></div>
+        <div id="javaMissing" class="banner warn" hidden>
+          <p><b>Java 21 fehlt.</b> Bitte lade <b>Eclipse Temurin 21 (JDK, Windows x64, .msi)</b> herunter und installiere es.
+            Beim Installieren „Set JAVA_HOME“ und „Add to PATH“ anhaken.</p>
+          <p><a href="https://adoptium.net/de/temurin/releases/?version=21&amp;os=windows&amp;arch=x64&amp;package=jdk" target="_blank" rel="noopener">Zu Adoptium Temurin 21 →</a></p>
+        </div>
+        <div class="row">
+          <button id="btnJavaCheck" class="btn">Erneut prüfen</button>
+        </div>
+        <details class="local-only">
+          <summary>Java-Pfad selbst angeben (nur falls nötig)</summary>
+          <div class="row">
+            <input id="javaPath" type="text" spellcheck="false" placeholder="C:\Program Files\Eclipse Adoptium\jdk-21…\bin\java.exe">
+            <button id="btnJavaPath" class="btn">Speichern</button>
+          </div>
+        </details>
+        <p id="neoforgeInfo" class="muted"></p>
+        <div class="row">
+          <button id="btnNeoforge" class="btn primary">NeoForge installieren</button>
+        </div>
+      </article>
+
+      <article class="card step" id="step4">
+        <h2><span class="num">4</span> Minecraft-EULA <span class="check" aria-hidden="true"></span></h2>
+        <p>Jeder Minecraft-Server braucht deine Zustimmung zur Endbenutzer-Lizenzvereinbarung (EULA) von Mojang.
+          <a href="https://aka.ms/MinecraftEULA" target="_blank" rel="noopener">EULA lesen →</a></p>
+        <label class="checkline"><input type="checkbox" id="eulaCheck"> Ich habe die Minecraft-EULA gelesen und stimme ihr zu.</label>
+        <div class="row"><button id="btnEula" class="btn primary">Zustimmen und speichern</button></div>
+      </article>
+
+      <div id="setupDone" class="banner ok" hidden>
+        <b>Fertig!</b> Klicke oben auf <b>Start</b>. Der erste Start eines Modpacks dauert ein paar Minuten.
+      </div>
+    </section>
+
+    <!-- ======================================================= Konsole -->
+    <section id="tab-console" class="tab" hidden>
+      <h1>Server &amp; Konsole</h1>
+      <div id="crashPanel" class="card crash" hidden>
+        <h2>Der Server ist abgestürzt</h2>
+        <p id="crashSummary" class="muted"></p>
+        <div id="crashIssues"></div>
+        <details id="crashDetails" open>
+          <summary id="crashFileName">Crash-Report</summary>
+          <pre id="crashText" class="log crash-text"></pre>
+        </details>
+        <div class="row">
+          <button id="btnCrashReload" class="btn small">Neu einlesen</button>
+          <button id="btnCrashHide" class="btn small ghost">Ausblenden</button>
+        </div>
+      </div>
+      <div class="card console-card">
+        <div class="console-head">
+          <span class="muted small" id="consoleInfo">Live-Ausgabe des Servers</span>
+          <label class="checkline small"><input type="checkbox" id="autoScroll" checked> Automatisch scrollen</label>
+        </div>
+        <div class="console-tools">
+          <div class="seg" id="consoleFilter">
+            <button class="active" data-f="all">Alle</button><button data-f="chat">💬 Chat</button><button data-f="warn">⚠ Warnungen</button><button data-f="err">⛔ Fehler</button>
+          </div>
+          <input id="consoleSearch" type="search" placeholder="In der Ausgabe suchen …" class="narrow">
+        </div>
+        <div id="console" class="log console" aria-live="off"></div>
+        <form id="cmdForm" class="row cmd">
+          <input id="cmdInput" type="text" autocomplete="off" spellcheck="false" placeholder="Befehl eingeben, z. B. say Hallo oder list">
+          <button class="btn primary" type="submit">Senden</button>
+        </form>
+        <p class="muted small">Tipp: Pfeiltasten ↑/↓ holen frühere Befehle zurück. Den Server immer über „Stopp“ beenden, damit die Welt gespeichert wird.</p>
+      </div>
+      <div class="card">
+        <h2>Letzter Crash-Report</h2>
+        <p class="muted small">Falls der Server früher schon einmal abgestürzt ist, kannst du den neuesten Bericht hier ansehen.</p>
+        <button id="btnShowLastCrash" class="btn small">Neuesten Crash-Report anzeigen</button>
+      </div>
+    </section>
+
+    <!-- ======================================================= Mods -->
+    <section id="tab-mods" class="tab" hidden>
+      <h1>Mods</h1>
+      <div id="modsRunning" class="banner warn" hidden>Der Server läuft. Mods können nur bei gestopptem Server ein- und ausgeschaltet werden.</div>
+      <div class="card" id="cardImprove">
+        <div class="row space">
+          <div>
+            <h2>Mods verbessern</h2>
+            <p class="muted small">Prüft alle Mods bei Modrinth und schaltet die aus, die auf einem Server nichts zu suchen haben: reine Client-Mods (Grafik, Minimap …) und alles auf der Ausschlussliste. Du siehst vorher, was geändert wird.</p>
+          </div>
+          <button id="btnImprove" class="btn primary">✨ Mods verbessern</button>
+        </div>
+        <div id="improveResult" class="improve" hidden></div>
+      </div>
+
+      <div class="card">
+        <h2>Mods hinzufügen</h2>
+        <div id="dropZone" class="drop" tabindex="0">
+          <div><b>JAR-Dateien hierher ziehen</b> oder <label class="link">auswählen<input type="file" id="modFiles" accept=".jar" multiple hidden></label></div>
+          <div class="muted small">Die Mods landen direkt im mods-Ordner und gelten ab dem nächsten Serverstart.</div>
+        </div>
+        <h3 class="mt">Bei Modrinth suchen</h3>
+        <form id="modSearchForm" class="row">
+          <input id="modSearch" type="search" placeholder="z. B. Lithium, Chunky, Create …" spellcheck="false">
+          <select id="modSearchSort" aria-label="Sortierung der Suchergebnisse">
+            <option value="">Sortieren: passend</option><option value="downloads">Meiste Downloads</option><option value="follows">Beliebteste</option><option value="newest">Neueste</option><option value="updated">Zuletzt aktualisiert</option>
+          </select>
+          <button class="btn" type="submit">Suchen</button>
+        </form>
+        <label class="checkline"><input type="checkbox" id="modSearchAll"> Auch Treffer zeigen, die noch nicht für meine Minecraft-Version gemeldet sind <span class="muted">(Installieren klappt dann eventuell nicht)</span></label>
+        <p class="muted small" id="modSearchInfo">Es werden nur Mods gezeigt, die für deine Minecraft-Version, NeoForge und Server passen. Benötigte Zusatz-Mods werden automatisch mitinstalliert.</p>
+        <ul id="modResults" class="results"></ul>
+        <div class="row"><button id="modSearchMore" class="btn" type="button" hidden>Mehr laden</button><span id="modSearchCount" class="muted small"></span></div>
+      </div>
+
+      <div class="card" id="cardUpdates">
+        <div class="row space">
+          <div>
+            <h2>Updates</h2>
+            <p class="muted small">Prüft bei Modrinth, ob es neuere Versionen deiner installierten Dateien gibt. Alte Dateien werden aufgehoben, falls etwas schiefgeht.</p>
+          </div>
+          <button id="btnCheckUpdates" class="btn">🔄 Nach Updates suchen</button>
+        </div>
+        <div id="updatesBox" hidden>
+          <ul id="updatesList" class="plain-list"></ul>
+          <div class="row"><button id="btnApplyUpdates" class="btn primary">Ausgewählte aktualisieren</button></div>
+        </div>
+      </div>
+
+      <div class="card" id="cardRecommended">
+        <h2>⭐ Empfohlen</h2>
+        <p class="muted small" id="recIntro">Beliebte Erweiterungen, die zu diesem Server passen. Ein Klick installiert sie samt Abhängigkeiten.</p>
+        <ul id="recList" class="results"></ul>
+      </div>
+
+      <div class="card" id="cardExclude">
+        <h2>Ausschlussliste</h2>
+        <p class="muted">Mods auf dieser Liste kommen nie auf den Server. Es reicht ein Teil des Dateinamens, z.&nbsp;B. <code>Geyser</code>.
+          Die Liste gilt beim Herunterladen der Mods (Einrichtung, Schritt 2) und mit dem Knopf unten auch für den vorhandenen Mod-Ordner.</p>
+        <ul id="excludeList" class="exclude-list"></ul>
+        <form id="excludeForm" class="row">
+          <input id="excludeInput" type="text" placeholder="Name oder Teil des Dateinamens" spellcheck="false">
+          <button class="btn" type="submit">Hinzufügen</button>
+        </form>
+        <div class="row">
+          <button id="btnExcludeApply" class="btn primary">Jetzt auf den Mod-Ordner anwenden</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row space">
+          <h2>Mods im Server-Ordner <span id="modCount" class="muted small"></span></h2>
+          <input id="modFilter" type="search" placeholder="Suchen …" class="narrow">
+          <select id="modSort" aria-label="Sortierung der installierten Liste">
+            <option value="name">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="enabled">Aktive zuerst</option><option value="disabled">Deaktivierte zuerst</option><option value="size">Größte zuerst</option>
+          </select>
+        </div>
+        <div id="modBulk" class="row" hidden>
+          <span id="modSelCount" class="small"></span>
+          <button id="btnModDelete" class="btn small danger">🗑 Ausgewählte löschen</button>
+          <button id="btnModSelNone" class="btn small ghost">Auswahl aufheben</button>
+        </div>
+        <p class="muted small">Häkchen = Mod ist aktiv. Ohne Häkchen wird die Datei zu <code>&lt;name&gt;.jar.disabled</code> umbenannt und nicht geladen.</p>
+        <div class="table-wrap">
+          <table class="mods">
+            <thead><tr><th><input type="checkbox" id="modSelAll" aria-label="Alle auswählen" title="Alle sichtbaren auswählen"></th><th>Aktiv</th><th></th><th>Mod</th><th class="hide-sm">Mod-ID</th><th class="hide-sm right">Größe</th><th></th></tr></thead>
+            <tbody id="modTable"><tr><td colspan="4" class="muted">Wird geladen …</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= Einstellungen -->
+    <section id="tab-settings" class="tab" hidden>
+      <h1>Einstellungen</h1>
+      <div class="card appearance-card">
+        <div class="appearance-head">
+          <span class="appearance-icon"><svg aria-hidden="true"><use href="assets/icons.svg#settings"/></svg></span>
+          <div><h2>Aussehen des Dashboards</h2><p class="muted small">Diese Auswahl wird direkt auf diesem PC gespeichert.</p></div>
+        </div>
+        <div class="appearance-layout">
+          <div>
+            <h3>Helligkeit</h3>
+            <div class="seg" id="themeMode" role="group" aria-label="Helligkeit wählen">
+              <button type="button" data-mode="dark">Dunkel</button>
+              <button type="button" data-mode="light">Hell</button>
+            </div>
+          </div>
+          <div>
+            <h3>Farbwelt</h3>
+            <div class="theme-swatches" id="themeSwatches">
+              <button type="button" data-palette="green" class="theme-swatch green"><i></i><span>Grün</span></button>
+              <button type="button" data-palette="blue" class="theme-swatch blue"><i></i><span>Blau</span></button>
+              <button type="button" data-palette="violet" class="theme-swatch violet"><i></i><span>Violett</span></button>
+              <button type="button" data-palette="ember" class="theme-swatch ember"><i></i><span>Orange</span></button>
+            </div>
+          </div>
+        </div>
+        <details class="custom-colors">
+          <summary>Eigene Farben wählen</summary>
+          <div class="color-controls">
+            <label>Akzentfarbe<input id="themeAccent" type="color" value="#57b36b"></label>
+            <label>Hintergrund<input id="themeBackground" type="color" value="#0f1216"></label>
+            <label>Karten<input id="themePanel" type="color" value="#171b21"></label>
+          </div>
+        </details>
+        <div class="row"><button id="btnThemeReset" type="button" class="btn ghost">Standard wiederherstellen</button></div>
+      </div>
+      <div class="card">
+        <h2>Arbeitsspeicher (RAM)</h2>
+        <p class="muted" id="ramTotal"></p>
+        <label class="slider">Maximal (Xmx): <b id="xmxVal"></b>
+          <input type="range" id="xmx" min="2" max="16" step="1">
+        </label>
+        <label class="slider">Beim Start (Xms): <b id="xmsVal"></b>
+          <input type="range" id="xms" min="1" max="16" step="1">
+        </label>
+        <p class="muted small">Für ein Modpack mit ca. 100 Mods sind 6 GB ein guter Wert. Lass deinem PC mindestens 4 GB übrig, besonders wenn du selbst mitspielst.</p>
+        <button id="btnRamSave" class="btn primary">RAM speichern</button>
+      </div>
+
+      <div class="card">
+        <h2>Server-Einstellungen</h2>
+        <p class="muted small">Änderungen gelten nach einem Neustart des Servers.</p>
+        <form id="propsForm" class="form-grid">
+          <label>Name in der Serverliste (MOTD)<input name="motd" type="text" maxlength="150"></label>
+          <label>Maximale Spieler<input name="max-players" type="number" min="1" max="500"></label>
+          <label>Schwierigkeit
+            <select name="difficulty">
+              <option value="peaceful">Friedlich</option><option value="easy">Einfach</option>
+              <option value="normal">Normal</option><option value="hard">Schwer</option>
+            </select>
+          </label>
+          <label>Spielmodus
+            <select name="gamemode">
+              <option value="survival">Überleben</option><option value="creative">Kreativ</option>
+              <option value="adventure">Abenteuer</option><option value="spectator">Zuschauer</option>
+            </select>
+          </label>
+          <label>Sichtweite (Chunks)<input name="view-distance" type="number" min="3" max="32"></label>
+          <label>Simulationsweite (Chunks)<input name="simulation-distance" type="number" min="3" max="32"></label>
+          <label>Port<input name="server-port" type="number" min="1024" max="65535"></label>
+          <label class="checkline"><input name="online-mode" type="checkbox"> Online-Modus (nur echte Minecraft-Accounts, empfohlen)</label>
+          <label class="checkline"><input name="white-list" type="checkbox"> Whitelist aktiv (nur eingetragene Spieler dürfen rein)</label>
+          <label class="checkline"><input name="enforce-whitelist" type="checkbox"> Whitelist sofort durchsetzen (nicht eingetragene Spieler werden gekickt)</label>
+          <div class="full"><button class="btn primary" type="submit">Einstellungen speichern</button></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Welt</h2>
+        <p class="muted small">Erzeugt eine komplett neue Welt. Die alte wird vorher automatisch als Backup gesichert. Der Server muss dafür aus sein.</p>
+        <div class="row">
+          <input id="worldSeed" type="text" maxlength="40" placeholder="Seed (optional, leer = zufällig)" spellcheck="false">
+          <button id="btnWorldReset" class="btn danger">Neue Welt erzeugen</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Benachrichtigungen</h2>
+        <p class="muted small">Meldungen auf dem Desktop, wenn der Server abstürzt oder jemand beitritt (solange diese Seite offen ist).</p>
+        <button id="btnNotify" class="btn">🔔 Desktop-Benachrichtigungen aktivieren</button>
+      </div>
+      <div class="card">
+        <h2>server.properties als Text</h2>
+        <p class="muted small">Für Fortgeschrittene: die komplette Datei bearbeiten.</p>
+        <textarea id="propsRaw" rows="18" spellcheck="false"></textarea>
+        <div class="row">
+          <button id="btnRawSave" class="btn primary">Datei speichern</button>
+          <button id="btnRawReload" class="btn ghost">Neu laden</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= Spieler -->
+    <section id="tab-players" class="tab" hidden>
+      <h1>Spieler</h1>
+      <div class="card">
+        <div class="row space">
+          <h2>Gerade online <span id="onlineCount" class="muted small"></span></h2>
+          <button id="btnPlayersRefresh" class="btn small">Aktualisieren</button>
+        </div>
+        <ul id="onlineList" class="player-list"></ul>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h2>Whitelist</h2>
+          <p id="whitelistState" class="small"></p>
+          <ul id="whitelistList" class="plain-list"></ul>
+          <form class="row" data-list="whitelist">
+            <input type="text" placeholder="Spielername oder Xbox-Gamertag" maxlength="18" spellcheck="false">
+            <label class="checkline small" title="Spieler mit Handy, Konsole oder Windows-App (Bedrock)"><input type="checkbox" class="isBedrock"> Bedrock</label>
+            <button class="btn" type="submit">Hinzufügen</button>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Operatoren (OP)</h2>
+          <p class="muted small">OPs dürfen alle Befehle nutzen, z.&nbsp;B. Spielmodus ändern oder Spieler kicken.</p>
+          <ul id="opsList" class="plain-list"></ul>
+          <form class="row" data-list="ops">
+            <input type="text" placeholder="Spielername oder Xbox-Gamertag" maxlength="18" spellcheck="false">
+            <label class="checkline small" title="Spieler mit Handy, Konsole oder Windows-App (Bedrock)"><input type="checkbox" class="isBedrock"> Bedrock</label>
+            <button class="btn" type="submit">Hinzufügen</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= Freunde einladen -->
+    <section id="tab-invite" class="tab" hidden>
+      <h1>Freunde einladen</h1>
+      <div class="row"><button id="btnInfoJava" class="btn primary">ℹ Info: So verbindet sich ein Freund (Java), mit Adresse</button></div>
+      <div class="card" id="inviteAddrCard">
+        <h2 id="inviteAddrTitle">Im selben WLAN / Heimnetz</h2>
+        <p id="inviteAddrText">Freunde im selben Netzwerk verbinden sich in Minecraft über <b>Multiplayer → Server hinzufügen</b> mit dieser Adresse:</p>
+        <div id="lanIps" class="ip-list"></div>
+        <p class="muted small local-only">Du selbst kannst dich auf diesem PC einfach mit <code>localhost</code> verbinden.</p>
+      </div>
+      <div class="card local-only">
+        <h2>Über das Internet (Portfreigabe)</h2>
+        <ol class="steps-list">
+          <li>Öffne die Oberfläche deines Routers im Browser (oft <code>http://192.168.178.1</code> bei der FRITZ!Box oder <code>http://192.168.0.1</code>).</li>
+          <li>Suche nach <b>Portfreigabe</b> bzw. <b>Port-Weiterleitung</b> (FRITZ!Box: Internet → Freigaben → Portfreigaben).</li>
+          <li>Lege eine Freigabe an: Protokoll <b>TCP</b>, Port <b id="portNum">25565</b>, Ziel ist dieser PC (<span id="targetIp">deine lokale IP</span>).</li>
+          <li>Wenn Windows beim ersten Serverstart fragt, ob Java ins Netzwerk darf: <b>Zulassen</b> klicken.</li>
+          <li>Deine Freunde verbinden sich mit deiner <b>öffentlichen IP</b>:
+            <span id="publicIp" class="mono">-</span>
+            <button id="btnPublicIp" class="btn small">Öffentliche IP anzeigen</button>
+          </li>
+        </ol>
+        <p class="muted small">Die öffentliche IP ändert sich bei vielen Anschlüssen regelmäßig. Gib die Adresse nur Leuten, denen du vertraust, und nutze am besten die Whitelist.</p>
+      </div>
+      <div class="banner info local-only">
+        <h3>Portfreigabe klappt nicht?</h3>
+        <p>Manche Anschlüsse (z.&nbsp;B. mit DS-Lite, Glasfaser oder Mobilfunk) erlauben keine Portfreigabe. Dann helfen diese kostenlosen Dienste:</p>
+        <ul>
+          <li><a href="https://playit.gg" target="_blank" rel="noopener">playit.gg</a>: Kleines Programm starten, und deine Freunde bekommen eine feste Adresse. Sie müssen nichts installieren.</li>
+          <li><a href="https://tailscale.com/download" target="_blank" rel="noopener">Tailscale</a>: Ein privates Netz für dich und deine Freunde. Alle installieren Tailscale und verbinden sich dann mit deiner Tailscale-IP (100.x.x.x).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ======================================================= Backups -->
+    <section id="tab-backups" class="tab" hidden>
+      <h1>Backups</h1>
+      <div class="card">
+        <p>Sichert den Welt-Ordner <b id="worldName">world</b> als ZIP-Datei mit Datum und Uhrzeit. Das geht auch während der Server läuft.</p>
+        <button id="btnBackup" class="btn primary">Welt sichern</button>
+        <p class="muted small" id="backupDir"></p>
+      </div>
+      <div class="card">
+        <h2>Automatisch sichern</h2>
+        <div class="row">
+          <label>Alle
+            <select id="abHours">
+              <option value="0">Aus</option><option value="1">1 Stunde</option><option value="2">2 Stunden</option>
+              <option value="4">4 Stunden</option><option value="6">6 Stunden</option><option value="12">12 Stunden</option><option value="24">24 Stunden</option>
+            </select>
+          </label>
+          <label>Letzte <input id="abKeep" type="number" min="1" max="200" style="width:5rem"> automatische Backups behalten</label>
+          <button id="btnAutoBackup" class="btn">Speichern</button>
+        </div>
+        <p class="muted small">Gesichert wird nur, solange der Server läuft. Eigene Backups bleiben immer erhalten.</p>
+      </div>
+      <div class="card">
+        <h2>Vorhandene Backups</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Datei</th><th class="hide-sm">Datum</th><th class="right">Größe</th><th></th></tr></thead>
+            <tbody id="backupTable"></tbody>
+          </table>
+        </div>
+        <p class="muted small">Beim Wiederherstellen wird die aktuelle Welt vorher automatisch gesichert. Der Server muss dafür aus sein.</p>
+      </div>
+    </section>
+
+    <!-- ======================================================= Bedrock -->
+    <section id="tab-bedrock" class="tab" hidden>
+      <h1>Bedrock-Support (Geyser)</h1>
+      <p class="lead">Damit können auch Spieler mit Minecraft Bedrock (Handy, Konsole, Windows-App) auf deinen Java-Server.</p>
+      <div class="bedrock-intro">
+        <div class="bedrock-badge"><svg aria-hidden="true"><use href="assets/icons.svg#bedrock"/></svg></div>
+        <div><b>Java und Bedrock, gemeinsam</b><span class="muted small">Geyser verbindet beide Editionen auf deinem Server.</span></div>
+        <button id="btnInfoBedrock" class="btn primary"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#info"/></svg> So verbinden sich Freunde</button>
+      </div>
+      <div class="card bedrock-card install-card">
+        <h2><span class="bedrock-card-icon"><svg aria-hidden="true"><use href="assets/icons.svg#install"/></svg></span> Installation</h2>
+        <ul class="plain-list" id="bedrockMods"></ul>
+        <p class="muted small">Geyser übersetzt zwischen Bedrock und Java. Floodgate erlaubt Bedrock-Spielern den Beitritt ohne Java-Account. Beide kommen von Modrinth und passen zu deiner Minecraft-Version.</p>
+        <div class="row"><button id="btnBedrockInstall" class="btn primary"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#install"/></svg> Geyser + Floodgate installieren</button></div>
+        <p class="muted small">Hinweis: Die Mods von Geyser und Floodgate stehen standardmäßig auf der Ausschlussliste. Beim Installieren werden sie dort entfernt.</p>
+      </div>
+      <div class="card bedrock-card auth-card">
+        <h2><span class="bedrock-card-icon"><svg aria-hidden="true"><use href="assets/icons.svg#shield"/></svg></span> Anmeldung der Bedrock-Spieler</h2>
+        <div id="bedrockCfgInfo" class="muted"></div>
+        <div class="row">
+          <select id="bedrockAuth">
+            <option value="floodgate">Ohne Java-Account (Floodgate, empfohlen)</option>
+            <option value="online">Mit Java-Account (online)</option>
+            <option value="offline">Offline (unsicher)</option>
+          </select>
+          <button id="btnBedrockAuth" class="btn">Speichern</button>
+        </div>
+      </div>
+      <div class="card bedrock-card connect-card">
+        <h2><span class="bedrock-card-icon"><svg aria-hidden="true"><use href="assets/icons.svg#network"/></svg></span> Verbinden</h2>
+        <p>Bedrock-Spieler brauchen eine <b>andere Adresse und einen anderen Port</b> als Java-Spieler: <b>UDP <span id="bedrockPort">19132</span></b>.</p>
+        <div id="bedrockAddr" class="ip-list"></div>
+        <p class="muted small local-only">Für Freunde über das Internet musst du im Router zusätzlich <b>UDP</b> <span class="bedrockPort2">19132</span> freigeben (wie bei der Portfreigabe unter „Freunde einladen“, aber Protokoll UDP).</p>
+      </div>
+    </section>
+  </main>
+
+  <aside id="rail" class="rail" aria-label="Info-Leiste"></aside>
+
+  <div id="palette" class="palette" hidden>
+    <div class="palette-box" role="dialog" aria-label="Befehlspalette">
+      <input id="paletteInput" type="text" placeholder="Was möchtest du tun? (Tippen, ↑↓, Enter)" autocomplete="off" spellcheck="false">
+      <ul id="paletteList"></ul>
+    </div>
+  </div>
+  <div id="infoModal" class="modal" hidden>
+    <div class="modal-box" role="dialog" aria-label="So verbinden sich Freunde">
+      <div class="row space"><h2 id="infoTitle">📘 So verbinden sich deine Freunde</h2><button id="infoClose" class="btn small ghost" title="Schließen (Esc)">✕</button></div>
+      <p class="muted small">Wähle das Gerät, mit dem sich dein Freund verbinden möchte. Du bekommst eine kurze Anleitung und die passende Adresse.</p>
+      <div id="infoPlatforms" class="seg wrap"></div>
+      <div id="infoBody"></div>
+    </div>
+  </div>
+  <div id="findbar" class="findbar" hidden>
+    <input id="findInput" type="text" placeholder="Auf der Seite suchen …" autocomplete="off" spellcheck="false">
+    <span id="findCount" class="muted small"></span>
+    <button id="findPrev" class="btn small ghost" title="Vorheriger (Umschalt+Enter)">↑</button>
+    <button id="findNext" class="btn small ghost" title="Nächster (Enter)">↓</button>
+    <button id="findClose" class="btn small ghost" title="Schließen (Esc)">✕</button>
+  </div>
+  <div id="toasts" aria-live="polite"></div>
+  <script src="app.js"></script>
+  <script src="home.js"></script>
+  <script src="features.js"></script>
+  <script src="servers.js"></script>
+  <script src="extras.js"></script>
+  <script src="find.js"></script>
+  <script src="info.js"></script>
+  <script src="nav.js"></script>
+  <script src="rail.js"></script>
+  <script src="tutorial.js"></script>
+  <script src="hosted.js"></script>
+</body>
+</html>

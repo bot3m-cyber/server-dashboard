@@ -1,0 +1,22 @@
+.login-body { display: grid; place-items: center; padding: 24px 16px; min-height: 100vh; }
+.login-card { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line-accent, var(--border)); border-radius: 14px; padding: 26px 24px; box-shadow: 0 18px 50px #0006; display: grid; gap: 14px; }
+.login-brand { display: flex; align-items: center; gap: 12px; }
+.login-brand h1 { margin: 0; font-size: 1.25rem; }
+.login-brand p { margin: 2px 0 0; }
+.login-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--panel-2); border-radius: 9px; padding: 3px; gap: 3px; }
+.login-tabs button { background: none; border: 0; color: var(--muted); padding: 9px; border-radius: 7px; font: inherit; cursor: pointer; }
+.login-tabs button[aria-selected="true"] { background: var(--panel); color: var(--text); box-shadow: 0 1px 4px #0005; }
+.login-msg { padding: 10px 12px; border-radius: 8px; background: #e05a5a22; border: 1px solid #e05a5a66; color: #ffb3b3; font-size: .93rem; }
+.login-msg.ok { background: #57b36b22; border-color: #57b36b66; color: #b9f0c4; }
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1f1f1f; border-color: #dadce0; text-decoration: none; padding: 10px; }
+.google-btn:hover { background: #f4f4f4; }
+.or-line { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .85rem; }
+.or-line::before, .or-line::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+#authForm { display: grid; gap: 12px; }
+#authForm label { display: grid; gap: 5px; font-size: .9rem; color: var(--muted); }
+#authForm input { width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; }
+#authForm input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn.wide { width: 100%; padding: 11px; }
+.small { font-size: .82rem; margin: 0; }
+.login-foot { text-align: center; }
+[hidden] { display: none !important; }

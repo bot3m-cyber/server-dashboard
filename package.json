@@ -1,0 +1,18 @@
+{
+  "name": "minecraft-server-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lokales Dashboard zum Einrichten und Betreiben eines Minecraft-Modpack-Servers (Modrinth .mrpack, NeoForge)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "express": "^5.1.0",
+    "yauzl": "^3.2.0"
+  }
+}

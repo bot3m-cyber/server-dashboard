@@ -1,0 +1,11 @@
+# Persönliche Daten, Server und Welten gehören nie ins Repository
+data/
+data-mehrbenutzer/
+server/
+servers/
+servers-mehrbenutzer/
+node_modules/
+*.log
+*.zip
+*.mrpack
+.env

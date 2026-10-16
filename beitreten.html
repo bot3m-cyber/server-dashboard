@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minecraft-Server beitreten</title>
+<style>
+  :root { --bg:#0f1512; --panel:#16201b; --line:#2a3a31; --text:#e6efe9; --muted:#93a59a; --accent:#65c77a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.5 system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); padding:24px 16px 48px; }
+  main { max-width:680px; margin:0 auto; display:grid; gap:16px; }
+  h1 { margin:0; font-size:1.6rem; } h2 { margin:0 0 8px; font-size:1.1rem; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .addr { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0; }
+  .addr b { font:600 1.15rem ui-monospace,Consolas,monospace; background:#0b110e; border:1px solid var(--line); border-radius:8px; padding:6px 12px; word-break:break-all; }
+  button, .tab { font:inherit; background:#1d2b24; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 14px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .tab[aria-selected="true"] { background:var(--accent); color:#07140b; border-color:var(--accent); font-weight:600; }
+  ol { margin:8px 0 0; padding-left:1.3rem; display:grid; gap:6px; }
+  label { display:grid; gap:4px; font-size:.85rem; color:var(--muted); }
+  input { font:inherit; background:#0b110e; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; width:100%; }
+  .grid { display:grid; gap:10px; grid-template-columns:2fr 1fr 1fr; }
+  @media (max-width:560px) { .grid { grid-template-columns:1fr; } }
+  details summary { cursor:pointer; color:var(--muted); }
+  code { background:#0b110e; border:1px solid var(--line); border-radius:5px; padding:1px 6px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title">Spiel mit auf meinem Minecraft-Server!</h1>
+    <p class="muted">Such dir aus, womit du spielst, und folge den Schritten.</p>
+  </header>
+
+  <section class="card">
+    <h2>Womit spielst du?</h2>
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-k="java" aria-selected="true">💻 PC (Java-Edition)</button>
+      <button class="tab" role="tab" data-k="bedrock" aria-selected="false">📱 Handy / Windows-App (Bedrock)</button>
+      <button class="tab" role="tab" data-k="switch" aria-selected="false">🎮 Konsole (Switch, Xbox, PlayStation)</button>
+    </div>
+  </section>
+
+  <section class="card" id="steps"></section>
+
+  <section class="card">
+    <details id="edit">
+      <summary>Für den Server-Besitzer: Adresse einstellen</summary>
+      <p class="muted">Trage hier die Adresse ein, die deine Freunde nutzen sollen, und speichere dann eine fertige Datei. Diese Datei schickst du deinen Freunden (z. B. per Discord oder WhatsApp). Sie öffnen sie mit einem Doppelklick im Browser.</p>
+      <div class="grid">
+        <label>Adresse / IP <input id="fHost" placeholder="z. B. meinserver.example.com oder 203.0.113.7"></label>
+        <label>Java-Port <input id="fPort" inputmode="numeric" placeholder="25565"></label>
+        <label>Bedrock-Port (UDP) <input id="fBport" inputmode="numeric" placeholder="19132"></label>
+      </div>
+      <label style="margin-top:10px">Name des Servers (optional) <input id="fName" placeholder="Unser Server"></label>
+      <p style="margin-top:12px"><button type="button" id="btnSave">💾 Datei mit diesen Werten speichern</button></p>
+      <p class="muted">Im selben WLAN reicht deine lokale IP. Für Freunde von außerhalb brauchst du deine öffentliche Adresse und eine Portfreigabe im Router (TCP für Java, UDP für Bedrock).</p>
+    </details>
+  </section>
+</main>
+
+<script>
+// Standardwerte: lokale Adresse im Heimnetz. Für Freunde von außerhalb die öffentliche Adresse eintragen.
+const DEFAULTS = { host: '192.168.0.138', port: '25565', bport: '19132', name: '' };
+
+const $ = (id) => document.getElementById(id);
+const hp = new URLSearchParams(location.hash.slice(1));
+const cfg = {
+  host: hp.get('h') || DEFAULTS.host, port: hp.get('p') || DEFAULTS.port,
+  bport: hp.get('b') || DEFAULTS.bport, name: hp.get('n') || DEFAULTS.name,
+};
+let kind = 'java';
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clean = (v, max) => String(v || '').trim().slice(0, max);
+
+function copyBtn(text) { return `<button type="button" data-copy="${esc(text)}">Kopieren</button>`; }
+
+function render() {
+  const addr = cfg.port && cfg.port !== '25565' ? `${cfg.host}:${cfg.port}` : cfg.host;
+  document.title = cfg.name ? `${cfg.name} beitreten` : 'Minecraft-Server beitreten';
+  $('title').textContent = cfg.name ? `Spiel mit auf „${cfg.name}“!` : 'Spiel mit auf meinem Minecraft-Server!';
+  const box = (label, v) => `<div class="addr"><span class="muted">${label}</span> <b>${esc(v)}</b> ${copyBtn(v)}</div>`;
+  let h = '';
+  if (kind === 'java') {
+    h = `<h2>So kommst du als Java-Spieler rein</h2>${box('Serveradresse', addr)}
+      <ol><li>Minecraft: Java Edition starten.</li><li>Auf <b>Multiplayer</b> → <b>Server hinzufügen</b> klicken.</li>
+      <li>Bei „Serveradresse“ die Adresse oben einfügen, bei „Servername“ irgendwas.</li><li>Fertig – Server doppelklicken und los.</li></ol>
+      <p class="muted">Du brauchst dieselbe Minecraft-Version wie der Server (oder der Server hat ViaVersion).</p>`;
+  } else if (kind === 'bedrock') {
+    h = `<h2>So kommst du mit Handy oder Windows-App rein</h2>${box('Adresse', cfg.host)}${box('Port (UDP)', cfg.bport)}
+      <ol><li>Minecraft (Bedrock) starten, <b>Spielen</b> → <b>Server</b>.</li><li>Ganz unten <b>Server hinzufügen</b>.</li>
+      <li>Bei „Serveradresse“ die Adresse und bei „Port“ den Port oben eintragen.</li>
+      <li>Du meldest dich mit deinem normalen Microsoft/Xbox-Konto an. Einen Java-Account brauchst du nicht.</li></ol>
+      <p class="muted">Dein Name auf dem Server beginnt mit einem Punkt, zum Beispiel <code>.DeinName</code>. Das ist normal.</p>`;
+  } else {
+    h = `<h2>So kommst du mit Switch, Xbox oder PlayStation rein</h2>
+      <p>Konsolen können keine eigenen Server eintragen. Der Trick: Man benutzt einen kostenlosen Vermittler-Server („BedrockConnect“).</p>
+      <ol><li>Auf der Konsole in Minecraft den <b>DNS</b> deiner Internetverbindung ändern auf <code>104.238.130.180</code> (Anleitung: bei „Netzwerkeinstellungen“ der Konsole → DNS manuell).</li>
+      <li>Minecraft starten und einen Server aus der Liste öffnen (z. B. „The Hive“). Es erscheint ein Menü von BedrockConnect.</li>
+      <li>Dort <b>Connect to a Server</b> wählen und eintragen:</li></ol>
+      ${box('Adresse', cfg.host)}${box('Port (UDP)', cfg.bport)}
+      <p class="muted">Danach den DNS wieder auf „automatisch“ stellen. Die Konsole braucht dafür Internet und ein Konto für Online-Spiele.</p>`;
+  }
+  $('steps').innerHTML = h;
+  for (const b of document.querySelectorAll('[data-copy]')) b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => { b.textContent = 'Kopiert ✔'; setTimeout(() => { b.textContent = 'Kopieren'; }, 1500); }, () => {});
+}
+
+for (const b of document.querySelectorAll('.tab')) b.onclick = () => {
+  kind = b.dataset.k;
+  for (const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t === b));
+  render();
+};
+const map = { fHost: ['host', 253], fPort: ['port', 5], fBport: ['bport', 5], fName: ['name', 40] };
+for (const [id, [k, max]] of Object.entries(map)) {
+  $(id).value = cfg[k];
+  $(id).oninput = () => { cfg[k] = clean($(id).value, max).replace(k === 'host' ? /[^A-Za-z0-9.\-:\[\]]/g : /^$/, ''); render(); };
+}
+$('btnSave').onclick = () => {
+  const d = JSON.stringify({ host: cfg.host, port: cfg.port, bport: cfg.bport, name: cfg.name }).split('<').join(String.fromCharCode(92) + 'u003c');
+  const html = document.documentElement.outerHTML;
+  const start = html.indexOf('const DEFAULTS = ');
+  const end = html.indexOf(';', html.indexOf('}', start)) + 1;
+  const src = '<!doctype html>' + String.fromCharCode(10) + html.slice(0, start) + 'const DEFAULTS = ' + d + ';' + html.slice(end);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([src], { type: 'text/html' }));
+  a.download = 'minecraft-server-beitreten.html';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+render();
+</script>
+</body>
+</html>
