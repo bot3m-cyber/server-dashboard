@@ -1,5 +1,14 @@
 # Minecraft Server-Dashboard
 
+## ⬇ Herunterladen und starten (3 Schritte)
+
+1. **[Hier klicken: Server-Dashboard.zip herunterladen](https://github.com/bot3m-cyber/server-dashboard/archive/refs/heads/main.zip)** und die ZIP-Datei entpacken.
+2. Einmalig [Node.js](https://nodejs.org) installieren (LTS-Version), falls noch nicht vorhanden.
+3. **Windows:** im entpackten Ordner `start.bat` doppelklicken. **Linux/macOS:** `chmod +x start.sh` und `./start.sh`.
+   Der Browser öffnet sich mit dem Dashboard (`http://localhost:3000`). Beim ersten Start führt dich der Assistent „Erste Schritte“.
+
+> Das Dashboard läuft auf deinem eigenen PC. Eine Webseite zum direkten Öffnen im Browser gibt es nicht, weil es Minecraft-Server auf deinem Rechner starten muss.
+
 Eine lokale Web-App, mit der du einen Minecraft-Modpack-Server (Modrinth-`.mrpack`, NeoForge) auf deinem
 eigenen PC (Windows; Linux und macOS über `start.sh`) einrichtest und betreibst. Das Dashboard ist nur auf diesem PC erreichbar
 (`http://localhost:3000`, es hört nur auf 127.0.0.1).
