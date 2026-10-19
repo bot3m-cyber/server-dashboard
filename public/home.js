@@ -263,7 +263,7 @@ function tickHome() {
   const tv = $('#tileTps');
   tv.textContent = t ? t.tps.toFixed(1).replace('.', ',') : '–';
   tv.className = `tile-value ${t ? (t.tps >= 19 ? 'good' : t.tps >= 15 ? 'warnc' : 'bad') : ''}`;
-  $('#tileTpsSub').textContent = t ? `Tick-Zeit ${t.mspt.toFixed(1).replace('.', ',')} ms · ${t.tps >= 19 ? 'läuft flüssig' : t.tps >= 15 ? 'leichte Ruckler' : 'Server hängt'}`
+  $('#tileTpsSub').textContent = t ? `${t.mspt != null ? `Tick-Zeit ${t.mspt.toFixed(1).replace('.', ',')} ms · ` : ''}${t.tps >= 19 ? 'läuft flüssig' : t.tps >= 15 ? 'leichte Ruckler' : 'Server hängt'}`
     : s.state === 'läuft' ? 'wird gemessen …' : '20 ist perfekt';
 
   // Der Java-Prozess belegt mehr als das Heap-Limit (Xmx), weil Mods auch Nativspeicher brauchen.

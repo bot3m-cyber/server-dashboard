@@ -104,7 +104,7 @@ Danach oben auf **Start** klicken. Der erste Start eines großen Modpacks dauert
 ## Sicherheit
 
 - Standardmäßig hört das Dashboard auf diesem PC **und** über die IP-Adresse des Rechners. Ohne Zugangspasswort kann dann jeder im Netzwerk deine Server steuern. Setze unter „Netzwerk & Betrieb“ ein Passwort oder stelle auf „Nur dieser PC“ (dann hört es nur auf `127.0.0.1`).
-- Einstellungen zu Netzwerk und HTTPS lassen sich von anderen Geräten nur ändern, wenn ein Zugangspasswort gesetzt ist und man damit angemeldet ist.
+- Einstellungen zu Netzwerk und HTTPS lassen sich von anderen Geräten nur ändern, wenn ein Zugangspasswort gesetzt ist und man damit angemeldet ist. Auf einem Server ohne Oberfläche setzt du das Passwort in der Konsole mit `node set-password.js`.
 - Anfragen von fremden Webseiten (anderer `Origin`/`Host`) werden abgelehnt.
 - Alle Dateizugriffe sind auf den Server-Ordner beschränkt (Schutz gegen Path Traversal).
 - Downloads aus dem Modpack sind nur von den Modrinth-erlaubten Adressen möglich

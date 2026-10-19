@@ -62,6 +62,8 @@ GOOGLE_CLIENT_SECRET=...
 # DASHBOARD_SERVERS_DIR=/var/lib/mcdash/servers
 ```
 
+**Zugangspasswort im lokalen Modus auf einem Server ohne Oberfläche:** Netzwerk-Einstellungen lassen sich nur vom Server selbst oder mit gesetztem Zugangspasswort ändern. Setze es in der Konsole: `node set-password.js` (die Eingabe bleibt unsichtbar; `--remove` entfernt es wieder). Es gilt sofort, ohne Neustart. Alternativ öffnest du das Dashboard per SSH-Tunnel: `ssh -L 3000:localhost:3000 benutzer@server`, dann im eigenen Browser `http://localhost:3000`.
+
 Der **erste registrierte Benutzer** wird automatisch Administrator. Registriere dich deshalb direkt nach dem Start selbst.
 
 ### Google-Anmeldung einrichten
