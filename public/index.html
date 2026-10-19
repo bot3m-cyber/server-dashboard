@@ -694,16 +694,52 @@
     <!-- ======================================================= Spieler -->
     <section id="tab-players" class="tab" hidden>
       <h1>Spieler</h1>
+      <div class="card" id="bulkCard">
+        <h2>Spieler eintragen – auch auf mehreren Servern</h2>
+        <form id="bulkForm" class="bulk-form">
+          <div class="row">
+            <input id="bulkName" type="text" placeholder="Spielername oder Xbox-Gamertag" maxlength="18" spellcheck="false" autocomplete="off">
+            <label class="checkline small" title="Spieler mit Handy, Konsole oder Windows-App (Bedrock)"><input type="checkbox" id="bulkBedrock"> Bedrock</label>
+          </div>
+          <div class="bulk-opts">
+            <fieldset>
+              <legend>Was soll passieren?</legend>
+              <label class="checkline"><input type="checkbox" id="bulkWl" checked> Auf die <b>Whitelist</b></label>
+              <label class="checkline"><input type="checkbox" id="bulkOp"> Zum <b>Operator (OP)</b> machen</label>
+            </fieldset>
+            <fieldset>
+              <legend>Auf welchen Servern?</legend>
+              <label class="checkline"><input type="radio" name="bulkScope" value="current" checked> Nur auf dem ausgewählten Server</label>
+              <label class="checkline"><input type="radio" name="bulkScope" value="whitelisted"> Auf allen Servern mit eingeschalteter Whitelist</label>
+              <label class="checkline"><input type="radio" name="bulkScope" value="all"> Auf allen Servern</label>
+              <label class="checkline"><input type="radio" name="bulkScope" value="selected"> Selbst auswählen …</label>
+              <div id="bulkServers" class="bulk-servers" hidden></div>
+            </fieldset>
+          </div>
+          <div class="row">
+            <button class="btn primary" type="submit" id="bulkAdd">Eintragen</button>
+            <button class="btn" type="button" id="bulkRemove">Austragen</button>
+          </div>
+          <ul id="bulkResult" class="plain-list small" hidden></ul>
+        </form>
+      </div>
       <div class="card">
         <div class="row space">
           <h2>Gerade online <span id="onlineCount" class="muted small"></span></h2>
           <button id="btnPlayersRefresh" class="btn small">Aktualisieren</button>
         </div>
         <ul id="onlineList" class="player-list"></ul>
+        <form id="broadcastForm" class="row">
+          <input id="broadcastText" type="text" maxlength="200" placeholder="Nachricht an alle Spieler im Spiel …">
+          <button class="btn" type="submit">📢 Senden</button>
+        </form>
       </div>
       <div class="grid2">
         <div class="card">
-          <h2>Whitelist</h2>
+          <div class="row space">
+            <h2>Whitelist</h2>
+            <label class="checkline switch-line small"><input type="checkbox" id="wlToggle" role="switch"> eingeschaltet</label>
+          </div>
           <p id="whitelistState" class="small"></p>
           <ul id="whitelistList" class="plain-list"></ul>
           <form class="row" data-list="whitelist">

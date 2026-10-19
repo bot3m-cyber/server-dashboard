@@ -144,7 +144,7 @@ async function loadBedrock() {
   if (b.authType) $('#bedrockAuth').value = b.authType;
   const bport = net?.hosted ? net.bedrockPort : b.port;
   $('#bedrockPort').textContent = bport;
-  for (const e of $('.bedrockPort2')) e.textContent = bport;
+  for (const e of $$('.bedrockPort2')) e.textContent = bport;
   const ips = net ? net.ips.filter((i) => !i.tailscale) : [];
   $('#bedrockAddr').replaceChildren(...ips.map((i) => el('div', { class: 'ip' }, el('b', {}, i.address), el('span', { class: 'small muted' }, `Port ${bport}`))));
 }
@@ -178,6 +178,11 @@ function playerCard(name) {
     el('div', { class: 'pcard-name' }, el('b', {}, name), isOp ? el('span', { class: 'tag' }, 'OP') : null),
     el('div', { class: 'pcard-actions' },
       act(isOp ? 'deop' : 'op', isOp ? 'OP entziehen' : 'OP geben'),
+      el('select', {
+        class: 'btn small', 'aria-label': `Spielmodus für ${name}`,
+        onchange: (e) => { const v = e.target.value; e.target.value = ''; if (!v) return; guarded(null, async () => { await api('POST', '/api/player-action', { name, action: v }); toast(`${name}: Spielmodus geändert.`, 'ok'); }); },
+      }, el('option', { value: '' }, 'Spielmodus …'), el('option', { value: 'survival' }, 'Überleben'), el('option', { value: 'creative' }, 'Kreativ'),
+      el('option', { value: 'adventure' }, 'Abenteuer'), el('option', { value: 'spectator' }, 'Zuschauer')),
       act('kick', 'Kicken', '', true),
       act('ban', 'Bannen', 'danger', true)));
 }

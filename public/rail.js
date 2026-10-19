@@ -65,11 +65,11 @@ function renderRail() {
 
   cards.push(railCard('Schnellzugriff',
     el('div', { class: 'rail-actions' },
-      el('button', { class: 'btn small', onclick: (e) => guarded(e.currentTarget, async () => { jobDismissed = null; await api('POST', '/api/backups'); }) }, '💾 Welt sichern'),
+      el('button', { class: 'btn small', onclick: (e) => guarded(e.currentTarget, async () => { jobDismissed = null; await api('POST', '/api/backups'); }) }, '💾 Sichern'),
       el('button', { class: 'btn small', onclick: () => showTab('console') }, '⌨ Konsole'),
       el('button', { class: 'btn small', onclick: () => showTab('files') }, '📁 Dateien'),
       el('button', { class: 'btn small', onclick: () => showTab('mods') }, '🧩 Mods'),
-      el('button', { class: 'btn small', onclick: () => (typeof openInfo === 'function' ? openInfo('java') : showTab('invite')) }, '🔗 Freunde verbinden'),
+      el('button', { class: 'btn small', onclick: () => (typeof openInfo === 'function' ? openInfo('java') : showTab('invite')) }, '🔗 Verbinden'),
       el('button', { class: 'btn small', onclick: () => showTab('backups') }, '🗂 Backups'))));
 
   if (tab !== 'home' && tab !== 'console') {

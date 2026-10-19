@@ -888,9 +888,11 @@ async function loadPlayers() {
   renderPlayerList($('#whitelistList'), d.whitelist, 'whitelist');
   renderPlayerList($('#opsList'), d.ops, 'ops');
   const ws = $('#whitelistState');
+  $('#wlToggle').checked = d.whitelistEnabled;
   ws.replaceChildren(d.whitelistEnabled
-    ? el('span', { style: 'color:var(--accent)' }, '✔ Whitelist ist eingeschaltet. Nur diese Spieler dürfen auf den Server.')
-    : el('span', { style: 'color:var(--warn)' }, 'Die Whitelist ist ausgeschaltet. Einschalten unter „Einstellungen“.'));
+    ? el('span', { style: 'color:var(--accent)' }, '✔ Nur diese Spieler dürfen auf den Server.')
+    : el('span', { style: 'color:var(--warn)' }, 'Ausgeschaltet: Jeder mit der Adresse kann beitreten.'));
+  loadBulkServers().catch(() => {});
   if (!d.onlineMode) ws.append(el('div', { class: 'muted' }, 'Hinweis: online-mode ist aus, deshalb werden Offline-UUIDs verwendet.'));
 }
 
@@ -908,6 +910,62 @@ for (const form of $$('#tab-players form[data-list]')) {
     });
   });
 }
+
+// ---- Spieler auf mehreren Servern eintragen
+
+async function loadBulkServers() {
+  const d = await api('GET', '/api/players/servers');
+  const box = $('#bulkServers');
+  const keep = new Set($$('input', box).filter((i) => i.checked).map((i) => i.value));
+  box.replaceChildren(...d.servers.map((s) => el('label', { class: 'checkline small' },
+    el('input', { type: 'checkbox', value: s.id, checked: keep.size ? keep.has(s.id) : s.current, disabled: !s.ready }),
+    s.name, s.current ? el('span', { class: 'tag' }, 'ausgewählt') : null,
+    s.whitelistEnabled ? el('span', { class: 'tag' }, 'Whitelist an') : null,
+    !s.ready ? el('span', { class: 'muted' }, ' (noch nicht eingerichtet)') : null)));
+}
+
+function bulkScope() { return $('input[name=bulkScope]:checked').value; }
+for (const r of $$('input[name=bulkScope]')) r.addEventListener('change', () => { $('#bulkServers').hidden = bulkScope() !== 'selected'; });
+
+async function runBulk(action, btn) {
+  const name = $('#bulkName').value.trim();
+  if (!name) { toast('Bitte einen Spielernamen eingeben.', 'error'); return; }
+  if (action === 'remove' && bulkScope() !== 'current' && !confirm(`${name} wirklich auf den gewählten Servern austragen?`)) return;
+  await guarded(btn, async () => {
+    const r = await api('POST', '/api/players/bulk', {
+      action, name, bedrock: $('#bulkBedrock').checked, whitelist: $('#bulkWl').checked, op: $('#bulkOp').checked,
+      scope: bulkScope(), servers: $$('#bulkServers input:checked').map((i) => i.value),
+    });
+    const ul = $('#bulkResult');
+    ul.hidden = false;
+    ul.replaceChildren(...r.results.map((x) => el('li', { class: x.skipped ? 'muted' : null }, x.skipped ? '– ' : x.ok ? '✔ ' : '✖ ', el('b', {}, x.server), x.kind ? ` · ${x.kind}: ` : ': ', x.message)));
+    if (r.error) toast(r.error, 'error');
+    else if (r.results.every((x) => x.ok)) { toast(action === 'add' ? `${name} eingetragen.` : `${name} ausgetragen.`, 'ok'); $('#bulkName').value = ''; }
+    await loadPlayers();
+  });
+}
+$('#bulkForm').addEventListener('submit', (e) => { e.preventDefault(); runBulk('add', $('#bulkAdd')); });
+$('#bulkRemove').addEventListener('click', (e) => runBulk('remove', e.currentTarget));
+
+$('#wlToggle').addEventListener('change', (e) => guarded(null, async () => {
+  try {
+    await api('POST', '/api/players/whitelist-mode', { enabled: e.target.checked });
+    toast(e.target.checked ? 'Whitelist eingeschaltet.' : 'Whitelist ausgeschaltet.', 'ok');
+  } catch (err) {
+    e.target.checked = !e.target.checked;
+    throw err;
+  }
+  await loadPlayers();
+}));
+
+$('#broadcastForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  guarded($('button', e.currentTarget), async () => {
+    await api('POST', '/api/players/broadcast', { text: $('#broadcastText').value });
+    $('#broadcastText').value = '';
+    toast('Nachricht gesendet.', 'ok');
+  });
+});
 
 $('#btnPlayersRefresh').addEventListener('click', (e) => guarded(e.currentTarget, async () => {
   await api('POST', '/api/players/refresh');

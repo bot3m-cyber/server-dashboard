@@ -46,7 +46,7 @@ const world = require('./lib/world');
 const presets = require('./lib/presets');
 const curseforge = require('./lib/curseforge');
 const properties2 = require('./lib/properties');
-const { UserError } = require('./lib/util');
+const { UserError, sleep } = require('./lib/util');
 
 const HOSTED = hosted.enabled();
 const PORT = Number(process.env.PORT) || 3000;
@@ -443,13 +443,39 @@ app.post('/api/settings/ram', api(async (req) => {
 }));
 
 app.get('/api/properties', api(async () => ({ ...properties.getForm(), raw: properties.readRaw() })));
+// Minecraft schreibt server.properties beim Stoppen (und bei manchen Befehlen) mit seinen Werten zurück.
+// Was bei laufendem Server gespeichert wird, merken wir uns und tragen es nach dem Stoppen erneut ein.
+const pendingProps = new Map();
+function rememberProps(entry) {
+  if (!mc.isRunning()) return;
+  const id = config.get().id;
+  const prev = pendingProps.get(id) || {};
+  pendingProps.set(id, entry.raw !== undefined ? { raw: entry.raw } : { values: { ...(prev.values || {}), ...entry.values } });
+}
+mcRegistry.onCreate((inst) => {
+  inst.on('status', (st) => {
+    if (st.state !== 'aus' || !pendingProps.has(inst.id)) return;
+    const p = pendingProps.get(inst.id);
+    pendingProps.delete(inst.id);
+    setTimeout(() => ctx.run({ id: inst.id, user: null }, () => {
+      try {
+        if (p.raw !== undefined) properties.saveRaw(p.raw);
+        else properties.saveForm(p.values);
+      } catch (e) { console.error('Einstellungen konnten nach dem Stoppen nicht eingetragen werden:', e.message); }
+    }), 1500);
+  });
+});
+
 app.post('/api/properties', api(async (req) => {
   setup.ensureServerDir();
-  return { ...properties.saveForm(req.body?.values), raw: properties.readRaw(), restartNeeded: mc.isRunning() };
+  const form = properties.saveForm(req.body?.values);
+  rememberProps({ values: req.body?.values || {} });
+  return { ...form, raw: properties.readRaw(), restartNeeded: mc.isRunning() };
 }));
 app.post('/api/properties/raw', api(async (req) => {
   setup.ensureServerDir();
   properties.saveRaw(req.body?.text);
+  rememberProps({ raw: req.body?.text });
   return { ...properties.getForm(), raw: properties.readRaw(), restartNeeded: mc.isRunning() };
 }));
 
@@ -469,6 +495,88 @@ app.post('/api/players/refresh', api(async () => {
     await wait;
   }
   return { online: [...mc.players], maxPlayers: mc.maxPlayers };
+}));
+
+// Server, die für Spieler-Aktionen über mehrere Server in Frage kommen
+function playerServers(req) {
+  const list = HOSTED ? config.listFor(req.user) : config.list();
+  const currentId = config.get().id; // außerhalb von ctx.run lesen, sonst ist jeder Server "aktuell"
+  return list.map((p) => ctx.run({ id: p.id, user: req.user || null }, () => {
+    let whitelistEnabled = false;
+    let ready = false;
+    try {
+      ready = !!p.serverDir && fs.existsSync(p.serverDir);
+      whitelistEnabled = ready && properties.get('white-list', 'false') === 'true';
+    } catch { /* Server noch nicht eingerichtet */ }
+    return { id: p.id, name: p.name, type: p.type, ready, whitelistEnabled, running: mcRegistry.get(p.id).isRunning(), current: p.id === currentId };
+  }));
+}
+
+app.get('/api/players/servers', api(async (req) => ({ servers: playerServers(req) })));
+
+// Spieler auf einmal zu mehreren Servern hinzufügen oder entfernen (Whitelist und/oder OP)
+app.post('/api/players/bulk', api(async (req) => {
+  const b = req.body || {};
+  const action = b.action === 'remove' ? 'remove' : 'add';
+  const kinds = [b.whitelist ? 'whitelist' : null, b.op ? 'ops' : null].filter(Boolean);
+  if (!kinds.length) throw new UserError('Bitte mindestens „Whitelist“ oder „Operator“ auswählen.');
+  const name = String(b.name || '').trim();
+  if (!name) throw new UserError('Bitte einen Spielernamen eingeben.');
+  const all = playerServers(req);
+  const currentId = config.get().id;
+  let targets;
+  if (b.scope === 'all') targets = all;
+  else if (b.scope === 'whitelisted') targets = all.filter((s) => s.whitelistEnabled);
+  else if (b.scope === 'selected') {
+    const ids = new Set(Array.isArray(b.servers) ? b.servers.map(String) : []);
+    targets = all.filter((s) => ids.has(s.id));
+  } else targets = all.filter((s) => s.id === currentId);
+  if (!targets.length) throw new UserError(b.scope === 'whitelisted' ? 'Kein Server hat gerade die Whitelist eingeschaltet.' : 'Bitte mindestens einen Server auswählen.');
+
+  const results = [];
+  for (const s of targets) {
+    if (!s.ready) { results.push({ id: s.id, server: s.name, ok: true, skipped: true, message: 'noch nicht eingerichtet, übersprungen' }); continue; }
+    for (const kind of kinds) {
+      const label = kind === 'ops' ? 'OP' : 'Whitelist';
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const r = await ctx.run({ id: s.id, user: req.user || null }, () => players.modify(kind, action, name, mcRegistry.get(s.id), { bedrock: !!b.bedrock }));
+        results.push({ id: s.id, server: s.name, kind: label, ok: true, message: action === 'add' ? (r.viaConsole ? 'hinzugefügt (über die Konsole)' : 'hinzugefügt') : 'entfernt' });
+      } catch (e) {
+        const already = e.status === 409 && /schon auf der Liste/.test(e.message);
+        const missing = e.status === 404 && /nicht auf der Liste/.test(e.message);
+        results.push({ id: s.id, server: s.name, kind: label, ok: already || missing, message: already ? 'war schon eingetragen' : missing ? 'war nicht eingetragen' : e.message });
+        if (e.status === 404 && /gibt es nicht/.test(e.message)) return { results, error: e.message }; // falscher Name: nicht bei jedem Server erneut versuchen
+      }
+    }
+  }
+  return { results };
+}));
+
+// Whitelist direkt im Spieler-Bereich ein- und ausschalten
+app.post('/api/players/whitelist-mode', api(async (req) => {
+  setup.ensureServerDir();
+  const on = !!req.body?.enabled;
+  if (mc.isRunning()) {
+    // Der laufende Server schreibt die Einstellung selbst in server.properties
+    if (mc.state !== 'läuft') throw new UserError('Bitte warten, bis der Server fertig gestartet ist.', 409);
+    mc.command(`whitelist ${on ? 'on' : 'off'}`);
+    const pending = pendingProps.get(config.get().id);
+    if (pending?.values && 'white-list' in pending.values) pending.values['white-list'] = on ? 'true' : 'false';
+    await sleep(1200);
+  } else {
+    properties.set({ 'white-list': on ? 'true' : 'false' });
+  }
+  return { enabled: on };
+}));
+
+// Nachricht an alle Spieler im Spiel
+app.post('/api/players/broadcast', api(async (req) => {
+  const text = String(req.body?.text || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
+  if (!text) throw new UserError('Bitte eine Nachricht eingeben.');
+  if (mc.state !== 'läuft') throw new UserError('Dafür muss der Server laufen.', 409);
+  mc.command(`say ${text}`);
+  return { ok: true };
 }));
 
 app.post('/api/players/:list', api(async (req) => {
@@ -708,7 +816,10 @@ app.post('/api/server/icon', express.raw({ type: 'image/png', limit: '300kb' }),
   return { restartNeeded: mc.isRunning() };
 }));
 
-const PLAYER_ACTIONS = { kick: 'kick', ban: 'ban', pardon: 'pardon', op: 'op', deop: 'deop' };
+const PLAYER_ACTIONS = {
+  kick: 'kick', ban: 'ban', pardon: 'pardon', op: 'op', deop: 'deop',
+  survival: 'gamemode survival', creative: 'gamemode creative', spectator: 'gamemode spectator', adventure: 'gamemode adventure',
+};
 app.post('/api/player-action', api(async (req) => {
   const { name, action } = req.body || {};
   const bare = typeof name === 'string' && players.floodgatePrefix() && name.startsWith(players.floodgatePrefix()) ? name.slice(players.floodgatePrefix().length) : name;

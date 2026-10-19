@@ -28,7 +28,7 @@ async function refreshMe() {
 function changePasswordDialog() {
   const cur = el('input', { type: 'password', autocomplete: 'current-password', maxlength: 200 });
   const nw = el('input', { type: 'password', autocomplete: 'new-password', maxlength: 200 });
-  const body = el('div', { class: 'form-grid' },
+  const body = el('div', { class: 'dlg-grid' },
     ME.user.provider === 'google' ? el('p', { class: 'muted small' }, 'Dein Konto nutzt die Anmeldung mit Google. Hier kannst du zusätzlich ein Passwort festlegen.') : el('label', {}, 'Aktuelles Passwort', cur),
     el('label', {}, 'Neues Passwort (mindestens 10 Zeichen)', nw));
   openDialog('Passwort ändern', body, [
@@ -99,7 +99,7 @@ async function loadAdmin() {
   const reserve = numInput(s.reserveRamGb, 0, 64);
   const settings = el('div', { class: 'card' },
     el('h2', {}, 'Einstellungen der Seite'),
-    el('div', { class: 'form-grid' },
+    el('div', { class: 'dlg-grid' },
       el('label', {}, 'Registrierung', reg),
       el('label', {}, 'Standard: Server pro Benutzer', qs),
       el('label', {}, 'Standard: RAM pro Server (GB)', qr),
@@ -125,7 +125,7 @@ async function loadAdmin() {
     const q = u.quota;
     const qBtn = act(u.customQuota ? 'Kontingent ✎' : 'Kontingent (Standard) ✎', async () => {
       const a = numInput(q?.maxServers ?? dq.maxServers, 0, 50), b = numInput(q?.maxRamGb ?? dq.maxRamGb, 1, 256), c = numInput(q?.maxDiskGb ?? dq.maxDiskGb, 1, 10000);
-      openDialog(`Kontingent für ${u.email}`, el('div', { class: 'form-grid' },
+      openDialog(`Kontingent für ${u.email}`, el('div', { class: 'dlg-grid' },
         el('label', {}, 'Server', a), el('label', {}, 'RAM pro Server (GB)', b), el('label', {}, 'Speicher (GB)', c)), [
         { label: 'Standard verwenden', onclick: async () => { await api('POST', '/api/admin/users/update', { id: u.id, quota: null }); loadAdmin(); } },
         { label: 'Speichern', primary: true, onclick: async () => { await api('POST', '/api/admin/users/update', { id: u.id, quota: { maxServers: a.value, maxRamGb: b.value, maxDiskGb: c.value } }); loadAdmin(); } },
