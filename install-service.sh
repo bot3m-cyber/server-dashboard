@@ -71,6 +71,19 @@ main() {
   echo "Programmordner: ${DIR}"
   echo "Läuft als:      ${RUN_USER}$([ "$CREATE_USER" -eq 1 ] && echo ' (wird neu angelegt)')"
   echo "Node.js:        ${NODE} ($("$NODE" -v 2>/dev/null))"
+  # Es gilt immer der Ordner, in dem dieses Skript liegt: Programm und Einstellungen (data/) bleiben dort
+  if [ -d "$DIR/data" ]; then
+    echo "Einstellungen:  ${DIR}/data (vorhanden, wird weiterverwendet)"
+    if [ -f "$DIR/data/network.json" ]; then
+      echo "  Netzwerk:     $("$NODE" -e 'try{const n=require(process.argv[1]);console.log("Adresse="+(n.bind||"network")+", Port="+(n.port||3000)+(n.accessPasswordHash?", Zugangspasswort gesetzt":", kein Zugangspasswort"))}catch(e){console.log("(nicht lesbar)")}' "$DIR/data/network.json" 2>/dev/null)"
+    fi
+    [ -f "$DIR/data/config.json" ] && echo "  Server:       $("$NODE" -e 'try{const c=require(process.argv[1]);console.log((c.servers||[]).map(s=>s.name).join(", ")||"keine")}catch(e){console.log("(nicht lesbar)")}' "$DIR/data/config.json" 2>/dev/null)"
+  else
+    echo "Einstellungen:  ${DIR}/data (wird beim ersten Start angelegt)"
+  fi
+  if [ -f "/etc/${NAME}.env" ] && grep -Eq '^[[:space:]]*DASHBOARD_(DATA|SERVERS)_DIR=' "/etc/${NAME}.env"; then
+    echo "Achtung: In /etc/${NAME}.env ist ein anderer Daten-Ordner (DASHBOARD_DATA_DIR / DASHBOARD_SERVERS_DIR) festgelegt. Der gilt statt ${DIR}/data."
+  fi
   if [ "$RUN_USER" = "root" ]; then echo "Warnung: Als root zu laufen ist unsicher. Besser ein eigener Benutzer (Standard)."; fi
   if [ "$(stat -c %U "$DIR" 2>/dev/null)" != "$RUN_USER" ]; then echo "Der Ordner ${DIR} wird dafür an ${RUN_USER} übergeben (chown)."; fi
 

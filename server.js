@@ -1069,6 +1069,8 @@ listeners.start(app).then(() => {
   else console.log(`Server-Dashboard läuft: http://localhost:${PORT}`);
   for (const u of listeners.urls()) if (u.kind !== 'local') console.log(`  ${u.label}: ${u.url}`);
   for (const e of st.errors) console.error(`  Hinweis: ${e}`);
+  console.log(`  Programm: ${__dirname}`);
+  console.log(`  Einstellungen und Daten: ${require('./lib/paths').DATA_DIR}`);
   const nc = netconf.get();
   if (nc.envLocked.includes('bind')) console.log(`  Hinweis: Die Adresse ist durch die Umgebungsvariable BIND=${process.env.BIND} festgelegt und lässt sich im Dashboard nicht ändern. Entferne BIND (z. B. aus /etc/mcdash.env), damit „Netzwerk & Betrieb“ gilt.`);
   else if (nc.bind === 'local') console.log('  Hinweis: Das Dashboard hört nur auf diesem Rechner (Einstellung „Nur dieser PC“ unter Netzwerk & Betrieb).');
