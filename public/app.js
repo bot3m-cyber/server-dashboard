@@ -987,6 +987,11 @@ async function loadInvite() {
       onclick: () => navigator.clipboard.writeText(`${i.address}${portSuffix}`).then(() => toast('Kopiert.', 'ok'), () => toast('Kopieren nicht möglich.', 'error')),
     }, 'Kopieren'))));
   if (!d.ips.length) box.replaceChildren(el('div', { class: 'muted' }, 'Keine Netzwerkverbindung gefunden.'));
+  if (d.domain) {
+    const addr = `${d.domain}${portSuffix}`;
+    box.append(el('div', { class: 'ip' }, el('b', {}, addr), el('span', { class: 'small muted' }, 'Deine Domain'),
+      el('button', { class: 'btn small ghost', onclick: () => navigator.clipboard.writeText(addr).then(() => toast('Kopiert.', 'ok'), () => toast('Kopieren nicht möglich.', 'error')) }, 'Kopieren')));
+  }
   const ts = d.ips.find((i) => i.tailscale);
   if (ts) box.append(el('div', { class: 'small muted' }, `Tailscale-IP: ${ts.address}${portSuffix}`));
   $('#portNum').textContent = d.port;

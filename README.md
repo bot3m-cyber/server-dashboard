@@ -48,6 +48,10 @@ Im Reiter **„Netzwerk & Betrieb“** stellst du alles ein, ohne Dateien zu bea
 - **HTTPS:** ein kostenloses Let’s-Encrypt-Zertifikat per Knopfdruck, automatische Erneuerung.
 - **Betriebsart:** lokal oder Mehrbenutzer (mit Anmeldung, auch hinter einer Domain). Beim Umstellen werden vorhandene Server dem ersten Administrator zugeordnet.
 
+- **Domain (optional):** Trage die Domain ein, unter der dein Rechner aus dem Internet erreichbar ist. Sie erscheint bei „Freunde einladen“ neben der IP-Adresse, z. B. für Einladungen per E-Mail.
+
+**Zugriff aus dem Internet:** Er ist nur mit gesetztem Zugangspasswort möglich (im Mehrbenutzer-Modus mit Anmeldung). Ohne Passwort sperrt das Dashboard Anfragen aus dem Internet und zeigt eine Seite, die erklärt, was zu tun ist. Zusätzlich muss der Port im Router zu diesem Rechner weitergeleitet sein.
+
 **Wichtig:** Ist das Dashboard im Netzwerk erreichbar, aber ohne Passwort, kann jeder im Netzwerk deine Server steuern. Das Dashboard weist oben darauf hin. Setze ein Passwort oder wähle „Nur dieser PC“.
 
 ## Updates, ohne Einstellungen zu verlieren

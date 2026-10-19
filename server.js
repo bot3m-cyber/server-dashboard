@@ -96,9 +96,22 @@ const app = express();
 app.disable('x-powered-by');
 
 // Schutz gegen DNS-Rebinding: nur Aufrufe an die erlaubten Adressen annehmen
+// Von anderen Geräten ist jede Adresse (IP oder Domain) erlaubt, sobald ein Zugangspasswort gesetzt ist.
+// Dann schützt die Anmeldung. Ohne Passwort gelten nur die bekannten Adressen.
+const passwordProtected = (req) => !HOSTED && access.enabled() && !netconf.isLoopback(req);
+
+function blockedPage(res, why) {
+  res.status(403).type('html').send(`<!doctype html><meta charset="utf-8"><title>Zugriff verweigert</title>
+<body style="font:16px/1.5 system-ui,sans-serif;max-width:560px;margin:12vh auto;padding:0 20px;color:#222">
+<h1>Zugriff verweigert</h1><p>${why}</p></body>`);
+}
 app.use((req, res, next) => {
-  if (!hostAllowed(req.headers.host)) {
-    return res.status(403).send('Zugriff verweigert.');
+  if (!hostAllowed(req.headers.host) && !passwordProtected(req)) {
+    return blockedPage(res, 'Das Dashboard antwortet nicht auf diese Adresse. Der Besitzer kann sie im Dashboard unter „Netzwerk &amp; Betrieb“ als Domain eintragen oder ein Zugangspasswort setzen (<code>node set-password.js</code> auf dem Server).');
+  }
+  // Aus dem Internet nur mit Zugangspasswort (Mehrbenutzer-Modus: mit Anmeldung)
+  if (!HOSTED && netconf.isPublicSource(req) && !access.enabled()) {
+    return blockedPage(res, 'Aus dem Internet ist das Dashboard nur mit Zugangspasswort erreichbar. Der Besitzer kann es im Dashboard unter „Netzwerk &amp; Betrieb“ setzen, oder auf dem Server mit <code>node set-password.js</code>.');
   }
   next();
 });
@@ -106,7 +119,9 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const origin = req.headers.origin;
-    if (origin && !originAllowed(origin)) return res.status(403).json({ error: 'Anfrage von einer fremden Webseite blockiert.' });
+    let sameSite = false;
+    try { sameSite = !!origin && new URL(origin).host.toLowerCase() === String(req.headers.host || '').toLowerCase(); } catch { /* ungültiger Origin */ }
+    if (origin && !originAllowed(origin) && !(passwordProtected(req) && sameSite)) return res.status(403).json({ error: 'Anfrage von einer fremden Webseite blockiert.' });
     if (!origin && req.headers['sec-fetch-site'] && req.headers['sec-fetch-site'] !== 'same-origin') {
       return res.status(403).json({ error: 'Anfrage von einer fremden Webseite blockiert.' });
     }
@@ -616,7 +631,7 @@ app.post('/api/players/:list', api(async (req) => {
 app.get('/api/network', api(async () => {
   const cfg = config.get();
   if (HOSTED) return { ips: [{ address: hosted.publicHost(), adapter: 'Adresse dieser Seite', likelyLan: true }], port: cfg.port, bedrockPort: cfg.bedrockPort, publicHost: hosted.publicHost(), hosted: true };
-  return { ips: network.localIps(), port: Number(properties.get('server-port', '25565')) || 25565 };
+  return { ips: network.localIps(), port: Number(properties.get('server-port', '25565')) || 25565, domain: netconf.get().publicDomain || null };
 }));
 app.get('/api/network/public', api(async () => (HOSTED ? { ip: hosted.publicHost() } : { ip: await network.publicIp() })));
 

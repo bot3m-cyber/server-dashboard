@@ -49,6 +49,7 @@ function netCard(d) {
   ];
   const custom = sysInput(n.customBind.join(', '), { placeholder: 'z. B. 192.168.0.138' });
   const port = sysInput(n.port, { inputmode: 'numeric', class: 'num', disabled: n.envLocked.includes('port') });
+  const domain = sysInput(n.publicDomain, { placeholder: 'z. B. server.meine-domain.de' });
   const radios = modes.map(([v, t, h]) => el('label', { class: 'checkline radio-line' },
     el('input', { type: 'radio', name: 'sysBind', value: v, checked: n.bind === v, disabled: n.envLocked.includes('bind'), onchange: () => { custom.disabled = v !== 'custom'; } }),
     el('span', {}, el('b', {}, t), el('br'), el('span', { class: 'muted small' }, h))));
@@ -58,11 +59,15 @@ function netCard(d) {
     el('p', { class: 'muted' }, 'Wo das Dashboard erreichbar ist. Änderungen gelten sofort, deine Minecraft-Server laufen dabei weiter.'),
     locked ? el('div', { class: 'banner info' }, 'Adresse oder Port sind über eine Umgebungsvariable (BIND / PORT) festgelegt und lassen sich hier nicht ändern.') : null,
     ...radios, el('div', { class: 'row' }, sysField('Adressen (mit Komma trennen)', custom), sysField('Port', port)),
+    el('h3', { class: 'mt' }, 'Deine Domain (optional)'),
+    el('p', { class: 'muted small' }, 'Die Domain, unter der dein Rechner aus dem Internet erreichbar ist (A-Record auf deine öffentliche IP). Sie erscheint bei „Freunde einladen“ und in den Einladungstexten, neben der IP-Adresse. Für den Zugriff von außen braucht das Dashboard ein Zugangspasswort.'),
+    el('div', { class: 'row' }, sysField('Domain', domain)),
+    n.bind === 'local' ? null : el('p', { class: 'small', style: n.passwordSet ? 'color:var(--accent)' : 'color:var(--warn)' }, n.passwordSet ? `✔ Zugriff von außen ist möglich: Dein Zugangspasswort schützt das Dashboard. Im Router muss der Port (${n.port}) zu diesem Rechner weitergeleitet sein.` : 'Zugriff aus dem Internet wird ohne Zugangspasswort blockiert. Setze unten eines.'),
     el('div', { class: 'row' }, el('button', {
       class: 'btn primary', type: 'button', disabled: locked && n.envLocked.length >= 2,
       onclick: (e) => guarded(e.currentTarget, async () => {
         const bind = document.querySelector('input[name=sysBind]:checked').value;
-        const r = await api('POST', '/api/system/network', { bind, customBind: custom.value, port: Number(port.value) });
+        const r = await api('POST', '/api/system/network', { bind, customBind: custom.value, port: Number(port.value), publicDomain: domain.value });
         toast('Gespeichert und angewendet.', 'ok');
         if (Number(port.value) !== location.port * 1 && location.port) {
           const u = r.net.urls[0].url;

@@ -42,6 +42,7 @@ function addrBox(kind) {
     return el('div', { class: 'info-box' }, el('h3', {}, 'Deine Adresse'), ...rows);
   }
   if (a.lan) rows.push(row('Im selben WLAN', kind === 'java' ? a.lan + portTxt : a.lan, kind !== 'java'));
+  if (INFO.net?.domain) rows.push(row('Über deine Domain', kind === 'java' ? INFO.net.domain + portTxt : INFO.net.domain, kind !== 'java'));
   rows.push(a.pub ? row('Über das Internet', kind === 'java' ? a.pub + portTxt : a.pub, kind !== 'java')
     : el('div', { class: 'info-addr' }, el('span', { class: 'muted small' }, 'Über das Internet'),
       el('button', {
