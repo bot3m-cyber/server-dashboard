@@ -110,6 +110,10 @@ WantedBy=multi-user.target"
   if [ "$CREATE_USER" -eq 1 ]; then
     adduser --system --group --home "/var/lib/${RUN_USER}" --shell /usr/sbin/nologin "$RUN_USER" || { echo "Benutzer konnte nicht angelegt werden."; return 1; }
   fi
+  if [ -f "/etc/${NAME}.env" ] && grep -Eq '^[[:space:]]*(BIND|PORT)=' "/etc/${NAME}.env"; then
+    echo "Achtung: In /etc/${NAME}.env stehen BIND= oder PORT=. Diese Werte überschreiben die Einstellungen im Dashboard"
+    echo "(BIND=127.0.0.1 erlaubt nur Zugriff vom Server selbst). Entferne die Zeilen, wenn das Dashboard auch über die IP des Servers erreichbar sein soll."
+  fi
   chown -R "${RUN_USER}:" "$DIR" || { echo "chown fehlgeschlagen."; return 1; }
   printf '%s\n' "$TXT" > "$UNIT"
   systemctl daemon-reload
@@ -121,6 +125,9 @@ WantedBy=multi-user.target"
   else
     echo; echo "Der Dienst läuft (noch) nicht. Siehe:  journalctl -u ${NAME} -n 50"; return 1
   fi
+  echo "Hört auf Port 3000 (ss):"
+  ss -tln 2>/dev/null | grep -E ':3000([[:space:]]|$)' | sed 's/^/  /'
+  echo "  (0.0.0.0:3000 oder *:3000 = auch über die Server-IP erreichbar, 127.0.0.1:3000 = nur vom Server selbst)"
   echo "  Status:       systemctl status ${NAME}"
   echo "  Protokoll:    journalctl -u ${NAME} -f"
   echo "  Neu starten:  sudo systemctl restart ${NAME}"

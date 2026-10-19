@@ -45,8 +45,10 @@ Datei `/etc/mcdash.env` (nur für root lesbar: `sudo chmod 600 /etc/mcdash.env`)
 
 ```ini
 HOSTED=1
-PORT=3000
-BIND=127.0.0.1
+# Nur setzen, wenn ein Reverse-Proxy (Caddy/nginx) davor steht. BIND und PORT überschreiben die Einstellungen im Dashboard:
+# BIND=127.0.0.1 erlaubt nur Zugriff vom Server selbst. Ohne Proxy diese zwei Zeilen weglassen.
+#PORT=3000
+#BIND=127.0.0.1
 TRUST_PROXY=1
 HOSTED_PUBLIC_URL=https://local-server-hosting.de
 # Adresse, die Spieler eintippen (Standard: Host aus HOSTED_PUBLIC_URL)
