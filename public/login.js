@@ -28,6 +28,14 @@ async function init() {
   try {
     cfg = await (await fetch('/auth/config')).json();
   } catch { /* Standardwerte */ }
+  if (cfg.passwordOnly) {
+    // Lokaler Modus mit Zugangspasswort: nur ein Passwortfeld
+    $('loginTabs').hidden = true; $('emailRow').hidden = true; $('nameRow').hidden = true; $('passHint').hidden = true;
+    $('googleBtn').hidden = true; $('orLine').hidden = true; $('loginFoot').textContent = 'Dieses Dashboard ist mit einem Zugangspasswort geschützt.';
+    document.title = 'Anmelden – Server-Dashboard'; mode = 'password'; $('submitBtn').textContent = 'Anmelden';
+    const err0 = new URLSearchParams(location.search).get('error'); if (err0) show(err0);
+    return;
+  }
   $('googleBtn').hidden = !cfg.google;
   $('orLine').hidden = !cfg.google;
   $('tabRegister').hidden = !cfg.registration;
@@ -44,12 +52,14 @@ $('authForm').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const email = $('fEmail').value.trim();
   const password = $('fPass').value;
-  if (!email || !password) return show('Bitte E-Mail-Adresse und Passwort eingeben.');
+  if (mode === 'password') {
+    if (!password) return show('Bitte das Passwort eingeben.');
+  } else if (!email || !password) return show('Bitte E-Mail-Adresse und Passwort eingeben.');
   $('submitBtn').disabled = true;
   try {
-    const r = await fetch(mode === 'register' ? '/auth/register' : '/auth/login', {
+    const r = await fetch(mode === 'password' ? '/auth/password-login' : mode === 'register' ? '/auth/register' : '/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name: $('fName').value.trim() }),
+      body: JSON.stringify(mode === 'password' ? { password } : { email, password, name: $('fName').value.trim() }),
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || `Fehler ${r.status}`);

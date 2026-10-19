@@ -48,19 +48,33 @@ const curseforge = require('./lib/curseforge');
 const properties2 = require('./lib/properties');
 const { UserError, sleep } = require('./lib/util');
 
-const HOSTED = hosted.enabled();
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.BIND || '127.0.0.1';
+const netconf = require('./lib/netconf');
+const access = require('./lib/access');
+const certs = require('./lib/certs');
+const listeners = require('./lib/listeners');
+const systemRoutes = require('./lib/system');
 
-// Erlaubte Adressen: lokal nur localhost, im Mehrbenutzer-Modus zusätzlich die öffentliche Adresse
-const ALLOWED_HOSTS = new Set([`localhost:${PORT}`, `127.0.0.1:${PORT}`]);
-const ALLOWED_ORIGINS = new Set([`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
-if (HOSTED) {
+const HOSTED = hosted.enabled();
+const PORT = netconf.get().port; // Standard 3000, einstellbar im Reiter „Netzwerk & Betrieb“ (oder per Umgebungsvariable PORT)
+const STARTED_AT = Date.now();
+
+// Erlaubte Adressen (Schutz gegen DNS-Rebinding): dieser PC, die IP-Adressen und der Name dieses Rechners,
+// die eingestellte Domain und im Mehrbenutzer-Modus die öffentliche Adresse. Wird bei jeder Anfrage frisch geprüft.
+function extraHosts() {
+  const out = [];
+  if (HOSTED) {
+    try { out.push(new URL(hosted.get().publicUrl).hostname); } catch { /* ungültige Adresse */ }
+    const ph = hosted.publicHost();
+    if (ph) out.push(ph);
+  }
+  return out;
+}
+const hostAllowed = (hostHeader) => netconf.allowedHostnames(extraHosts()).has(netconf.hostnameOf(hostHeader));
+function originAllowed(origin) {
   try {
-    const u = new URL(hosted.get().publicUrl);
-    ALLOWED_HOSTS.add(u.host.toLowerCase());
-    ALLOWED_ORIGINS.add(u.origin);
-  } catch { /* ungültige Adresse: wird beim Start gemeldet */ }
+    const u = new URL(origin);
+    return ['http:', 'https:'].includes(u.protocol) && hostAllowed(u.host);
+  } catch { return false; }
 }
 
 config.load();
@@ -83,7 +97,7 @@ app.disable('x-powered-by');
 
 // Schutz gegen DNS-Rebinding: nur Aufrufe an die erlaubten Adressen annehmen
 app.use((req, res, next) => {
-  if (!ALLOWED_HOSTS.has(String(req.headers.host || '').toLowerCase())) {
+  if (!hostAllowed(req.headers.host)) {
     return res.status(403).send('Zugriff verweigert.');
   }
   next();
@@ -92,26 +106,31 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const origin = req.headers.origin;
-    if (origin && !ALLOWED_ORIGINS.has(origin)) return res.status(403).json({ error: 'Anfrage von einer fremden Webseite blockiert.' });
+    if (origin && !originAllowed(origin)) return res.status(403).json({ error: 'Anfrage von einer fremden Webseite blockiert.' });
     if (!origin && req.headers['sec-fetch-site'] && req.headers['sec-fetch-site'] !== 'same-origin') {
       return res.status(403).json({ error: 'Anfrage von einer fremden Webseite blockiert.' });
     }
   }
   next();
 });
-if (HOSTED) {
-  app.use((req, res, next) => {
+// Sicherheits-Header: im Mehrbenutzer-Modus und sobald das Dashboard im Netzwerk erreichbar ist
+app.use((req, res, next) => (HOSTED || req.secure || netconf.get().bind !== 'local' ? hardenHeaders(req, res, next) : next()));
+function hardenHeaders(req, res, next) {
+  {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: https://cdn.modrinth.com https://media.forgecdn.net; "
       + "style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.modrinth.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
-    if (hosted.isHttps()) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    if (req.secure || hosted.isHttps()) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
-  });
+  }
 }
 app.use(express.json({ limit: '2mb' }));
+
+// Für die Wartezeit nach einem Neustart: die Seite fragt (ohne Anmeldung), ob das Dashboard wieder da ist
+app.get('/api/system/ping', (req, res) => res.json({ ok: true, hosted: HOSTED, startedAt: STARTED_AT }));
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PUBLIC_PAGES = new Set(['/login.html', '/login.js', '/login.css', '/style.css']);
@@ -147,9 +166,15 @@ if (HOSTED) {
     }
   });
 }
+// Lokaler Modus: Zugriffe von anderen Geräten brauchen das Zugangspasswort (falls eines gesetzt ist). Der eigene PC nie.
+if (!HOSTED) {
+  access.mountRoutes(app);
+  app.use(access.middleware);
+}
 app.use('/icons', express.static(modmeta.ICON_DIR, { maxAge: '7d', fallthrough: true }));
 app.use(express.static(PUBLIC_DIR, { index: 'index.html' }));
 if (HOSTED) authRoutes.mountApi(app);
+systemRoutes.mount(app, HOSTED, { startedAt: STARTED_AT });
 
 /** Diese Routen darf im Mehrbenutzer-Modus nur ein Administrator benutzen (sie greifen auf beliebige Pfade zu oder gelten für alle). */
 const ADMIN_ONLY = [/^\/api\/setup\/(serverdir|path)$/, /^\/api\/servers\/(detect|adopt)$/, /^\/api\/curseforge\/key$/];
@@ -1017,15 +1042,23 @@ function openBrowser(url) {
   exec(cmd, () => {});
 }
 
-const httpServer = app.listen(PORT, HOST, () => {
-  if (HOSTED) console.log(`Server-Dashboard (Mehrbenutzer) läuft: ${hosted.get().publicUrl}  (intern ${HOST}:${PORT})`);
+listeners.start(app).then(() => {
+  const st = listeners.state();
+  if (HOSTED) console.log(`Server-Dashboard (Mehrbenutzer) läuft: ${hosted.get().publicUrl}  (Port ${PORT})`);
   else console.log(`Server-Dashboard läuft: http://localhost:${PORT}`);
+  for (const u of listeners.urls()) if (u.kind !== 'local') console.log(`  ${u.label}: ${u.url}`);
+  for (const e of st.errors) console.error(`  Hinweis: ${e}`);
+  if (netconf.get().bind !== 'local' && !HOSTED && !access.enabled()) {
+    console.log('  Achtung: Das Dashboard ist im Netzwerk erreichbar, aber ohne Zugangspasswort. Setze eines unter „Netzwerk & Betrieb“.');
+  }
+  certs.startRenewal((m) => console.log(`[HTTPS] ${m}`));
   if (process.argv.includes('--open') && !HOSTED) openBrowser(`http://localhost:${PORT}`);
-});
-httpServer.on('error', (e) => {
+}).catch((e) => {
   if (e.code === 'EADDRINUSE') {
-    console.error(`\nPort ${PORT} ist schon belegt. Läuft das Dashboard vielleicht schon in einem anderen Fenster?`);
-    console.error(`Öffne einfach http://localhost:${PORT} im Browser.\n`);
+    console.error(`
+Port ${PORT} ist schon belegt. Läuft das Dashboard vielleicht schon in einem anderen Fenster?`);
+    console.error(`Öffne einfach http://localhost:${PORT} im Browser.
+`);
   } else {
     console.error('Das Dashboard konnte nicht starten:', e.message);
   }

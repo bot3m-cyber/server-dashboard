@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <div class="login-tabs" role="tablist">
+    <div class="login-tabs" id="loginTabs" role="tablist">
       <button type="button" role="tab" id="tabLogin" aria-selected="true">Anmelden</button>
       <button type="button" role="tab" id="tabRegister" aria-selected="false">Konto erstellen</button>
     </div>
@@ -35,7 +35,7 @@
       <label id="nameRow" hidden>Name (optional)
         <input id="fName" type="text" autocomplete="name" maxlength="60">
       </label>
-      <label>E-Mail-Adresse
+      <label id="emailRow">E-Mail-Adresse
         <input id="fEmail" type="email" autocomplete="email" required>
       </label>
       <label>Passwort
@@ -46,7 +46,7 @@
     </form>
 
     <p id="closedNote" class="muted small" hidden>Neue Konten können gerade nicht erstellt werden.</p>
-    <p class="muted small login-foot">Deine Server gehören nur dir. Andere Benutzer können sie weder sehen noch ändern.</p>
+    <p class="muted small login-foot" id="loginFoot">Deine Server gehören nur dir. Andere Benutzer können sie weder sehen noch ändern.</p>
   </main>
   <script src="login.js"></script>
 </body>

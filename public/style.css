@@ -706,3 +706,17 @@ kbd { display: inline-block; padding: 1px 6px; border: 1px solid var(--border); 
 .bulk-opts fieldset { align-content: start; }
 .rail-console div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #bulkResult li { display: block; padding: 4px 0; }
+/* Netzwerk & Betrieb */
+.radio-line { align-items: flex-start; padding: 6px 0; }
+.radio-line input { margin-top: 5px; }
+#systemBody .card { margin-bottom: 14px; }
+#systemBody .row > label { flex: 1 1 220px; display: grid; gap: 4px; color: var(--muted); font-size: .9rem; }
+#systemBody input[type=text], #systemBody input[type=email], #systemBody input[type=password] { width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; }
+#systemBody details { margin: 8px 0; }
+#systemBody summary { cursor: pointer; color: var(--muted); }
+#systemBody .mt { margin-top: 16px; }
+#systemBody code { word-break: break-all; }
+.net-warn { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.net-warn-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (min-width: 960px) { .net-warn { margin-left: calc(var(--side-w) + 24px); margin-right: 24px; } }
+@media (min-width: 1240px) { .net-warn { margin-right: calc(var(--rail-w) + 24px); } }

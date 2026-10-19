@@ -39,6 +39,8 @@ cd ~/dashboard && npm install --omit=dev
 
 ## 2. Konfiguration
 
+> **Neu: alles im Dashboard einstellbar.** Im Reiter **„Netzwerk & Betrieb“** stellst du Adresse und Port, Zugangspasswort, HTTPS (Let’s Encrypt per Knopfdruck), die Betriebsart (lokal / Mehrbenutzer), öffentliche Adresse und Google-Anmeldung ein. Die Werte liegen in `data/network.json` und `data/hosted.json`. Die Umgebungsvariablen unten funktionieren weiterhin und haben Vorrang (das Dashboard zeigt dann an, dass ein Wert festgelegt ist). Für den ersten Start auf einem frischen Server reicht `HOSTED=1`, den Rest klickst du danach im Dashboard.
+
 Datei `/etc/mcdash.env` (nur für root lesbar: `sudo chmod 600 /etc/mcdash.env`):
 
 ```ini
@@ -86,7 +88,9 @@ User=mcdash
 WorkingDirectory=/home/mcdash/dashboard
 EnvironmentFile=/etc/mcdash.env
 ExecStart=/usr/bin/node server.js
-Restart=on-failure
+Restart=always
+# Erlaubt dem Dashboard, Port 80 und 443 für HTTPS zu öffnen
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 # Beim Stoppen bekommen die Minecraft-Server Zeit zum Speichern
 TimeoutStopSec=90
 KillMode=mixed
@@ -101,7 +105,21 @@ sudo systemctl daemon-reload && sudo systemctl enable --now mcdash
 journalctl -u mcdash -f
 ```
 
-## 4. HTTPS mit Caddy
+## 4. HTTPS
+
+### Variante A: direkt im Dashboard (Let’s Encrypt per Knopfdruck)
+
+1. Die Domain zeigt per A-Record auf die öffentliche IP des Servers. Port **80** und **443** sind in Firewall/Router frei und werden von keinem anderen Programm benutzt.
+2. Unter Linux brauchen Ports unter 1024 eine Berechtigung. Entweder `sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))` oder in der systemd-Datei `AmbientCapabilities=CAP_NET_BIND_SERVICE` (siehe unten).
+3. Im Dashboard: **Netzwerk & Betrieb → HTTPS mit Let’s Encrypt**. Domain und E-Mail eintragen, „HTTPS verwenden“ anhaken, **Zertifikat erstellen**. Zum Ausprobieren zuerst „Test-System“ ankreuzen (Browser misstrauen diesem Zertifikat, aber es gibt keine Begrenzung bei Fehlversuchen), dann ohne Haken wiederholen.
+4. Das Dashboard prüft zweimal täglich und erneuert das Zertifikat 30 Tage vor Ablauf selbst. Ein erstes Zertifikat und ein Wechsel der Domain geschehen nur per Knopfdruck.
+5. Mit aktivem HTTPS hört der normale Port (3000) nur noch auf diesem Rechner. Von außen erreichst du das Dashboard über `https://deine-domain`. Port 80 leitet auf HTTPS um.
+
+Dateien: `data/https/` (Zertifikat und Schlüssel, nie weitergeben). Der Schlüssel wird mit eingeschränkten Rechten (nur Besitzer) gespeichert.
+
+> **Ehrlicher Stand:** Der Ablauf (HTTPS-Betrieb, Weiterleitung, Statusanzeige) wurde mit einem selbst signierten Zertifikat getestet. Die eigentliche Anfrage bei Let’s Encrypt wurde **nicht** gegen eine echte Domain getestet.
+
+### Variante B: Caddy als Reverse-Proxy
 
 `/etc/caddy/Caddyfile`:
 
@@ -159,6 +177,9 @@ Eingebaut:
 - Jeder Benutzer stimmt beim Anlegen eines Servers der Minecraft-EULA zu. Das Dashboard fragt danach.
 
 ## 8. Betrieb
+
+- **Updates ohne Datenverlust:** `./update.sh` (oder `update.bat`) holt die neueste Version von GitHub. Alle Einstellungen, Benutzer, Zertifikate und Server-Listen liegen in `data/` und werden nicht angefasst (der Ordner steht in `.gitignore`). Neue Einstellungen aus Updates bekommen Standardwerte, gespeicherte Werte werden nie überschrieben. Bei einem ZIP-Download kopierst du den Ordner `data/` in den neuen Programmordner.
+- **Neustart aus dem Dashboard:** Reiter „Netzwerk & Betrieb“ → „Dashboard neu starten“ (nur wenn kein Minecraft-Server läuft). Unter systemd klappt das mit `Restart=always`.
 
 - **Updates:** Dashboard-Ordner aktualisieren, `npm install --omit=dev`, `sudo systemctl restart mcdash`.
 - **Sicherung durch dich als Betreiber:** `data/` (Benutzer, Sitzungen, Einstellungen) und `servers/` regelmäßig sichern.

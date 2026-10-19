@@ -10,8 +10,8 @@
 > Das Dashboard läuft auf deinem eigenen PC. Eine Webseite zum direkten Öffnen im Browser gibt es nicht, weil es Minecraft-Server auf deinem Rechner starten muss.
 
 Eine lokale Web-App, mit der du einen Minecraft-Modpack-Server (Modrinth-`.mrpack`, NeoForge) auf deinem
-eigenen PC (Windows; Linux und macOS über `start.sh`) einrichtest und betreibst. Das Dashboard ist nur auf diesem PC erreichbar
-(`http://localhost:3000`, es hört nur auf 127.0.0.1).
+eigenen PC (Windows; Linux und macOS über `start.sh`) einrichtest und betreibst. Das Dashboard öffnest du auf diesem PC unter
+`http://localhost:3000`. Standardmäßig hört es auch auf die IP-Adresse des Rechners (siehe „Netzwerk, Domain und HTTPS“), du kannst es dort auf „nur dieser PC“ stellen.
 
 ## Voraussetzungen
 
@@ -38,6 +38,21 @@ der Reiter **Anleitung** erklärt alle Bereiche.
 Mit der Umgebungsvariable `HOSTED=1` läuft das Dashboard als Mehrbenutzer-Seite mit Anmeldung (E-Mail oder Google), getrennten Servern,
 einem eigenen Port pro Server und Kontingenten. Aufbau auf einem Linux-Server mit Domain, HTTPS, Firewall und Google-Anmeldung:
 siehe **[DEPLOY.md](DEPLOY.md)**. Ohne `HOSTED=1` ändert sich nichts am lokalen Betrieb.
+
+## Netzwerk, Domain und HTTPS
+
+Im Reiter **„Netzwerk & Betrieb“** stellst du alles ein, ohne Dateien zu bearbeiten:
+
+- **Erreichbarkeit:** nur dieser PC, oder auch über die IP-Adresse des Rechners (Standard), oder nur bestimmte Adressen. Port einstellbar. Änderungen gelten sofort, laufende Minecraft-Server stören sie nicht.
+- **Zugangspasswort (optional):** schützt das Dashboard vor anderen Geräten. Auf diesem PC (localhost) brauchst du es nie.
+- **HTTPS:** ein kostenloses Let’s-Encrypt-Zertifikat per Knopfdruck, automatische Erneuerung.
+- **Betriebsart:** lokal oder Mehrbenutzer (mit Anmeldung, auch hinter einer Domain). Beim Umstellen werden vorhandene Server dem ersten Administrator zugeordnet.
+
+**Wichtig:** Ist das Dashboard im Netzwerk erreichbar, aber ohne Passwort, kann jeder im Netzwerk deine Server steuern. Das Dashboard weist oben darauf hin. Setze ein Passwort oder wähle „Nur dieser PC“.
+
+## Updates, ohne Einstellungen zu verlieren
+
+Alle Einstellungen liegen im Ordner `data/` und stehen in `.gitignore`. `update.bat` (Windows) bzw. `./update.sh` (Linux/macOS) holt die neueste Version von GitHub und lässt `data/` unberührt. Bei einem ZIP-Download: den Ordner `data` in den neuen Programmordner kopieren.
 
 ## Einrichtung (einmalig)
 
@@ -88,7 +103,8 @@ Danach oben auf **Start** klicken. Der erste Start eines großen Modpacks dauert
 
 ## Sicherheit
 
-- Das Dashboard hört nur auf `127.0.0.1:3000`. Andere Geräte im Netz kommen nicht heran.
+- Standardmäßig hört das Dashboard auf diesem PC **und** über die IP-Adresse des Rechners. Ohne Zugangspasswort kann dann jeder im Netzwerk deine Server steuern. Setze unter „Netzwerk & Betrieb“ ein Passwort oder stelle auf „Nur dieser PC“ (dann hört es nur auf `127.0.0.1`).
+- Einstellungen zu Netzwerk und HTTPS lassen sich von anderen Geräten nur ändern, wenn ein Zugangspasswort gesetzt ist und man damit angemeldet ist.
 - Anfragen von fremden Webseiten (anderer `Origin`/`Host`) werden abgelehnt.
 - Alle Dateizugriffe sind auf den Server-Ordner beschränkt (Schutz gegen Path Traversal).
 - Downloads aus dem Modpack sind nur von den Modrinth-erlaubten Adressen möglich
