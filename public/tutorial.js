@@ -35,6 +35,42 @@ function openDialog(title, body, actions = [], opts = {}) {
   return close;
 }
 
+/** Fragt nach, bevor etwas Unerwünschtes passiert. Gibt true zurück, wenn bestätigt wurde. */
+function confirmDialog(title, body, okLabel, opts = {}) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    openDialog(title, body, [
+      { label: 'Abbrechen', onclick: () => finish(false) },
+      { label: okLabel, primary: true, onclick: () => { opts.onOk?.(); finish(true); } },
+    ], { onClose: () => finish(false) });
+    // Fokus auf „Abbrechen“, damit ein versehentliches Enter nichts auslöst
+    setTimeout(() => document.querySelector('.modal:last-of-type .dialog-actions .btn')?.focus(), 0);
+  });
+}
+
+const SKIP_EMPTY_KEY = 'srvdash-skip-confirm-empty';
+
+/** Sicherheitsabfrage vor „Stoppen“ und „Neustart“ eines Minecraft-Servers. */
+async function confirmServerAction(kind) {
+  const players = state.server?.players || [];
+  if (!players.length && store.get(SKIP_EMPTY_KEY) === '1') return true;
+  const stop = kind === 'stop';
+  const name = 'Der Server';
+  const skip = el('input', { type: 'checkbox' });
+  const body = el('div', {},
+    players.length
+      ? el('div', { class: 'banner warn' }, el('b', {}, `Gerade ${players.length === 1 ? 'ist 1 Spieler' : `sind ${players.length} Spieler`} online:`), ` ${players.slice(0, 12).join(', ')}${players.length > 12 ? ' …' : ''}`, el('br'), 'Sie werden getrennt.')
+      : el('p', { class: 'muted' }, 'Gerade ist niemand online.'),
+    el('p', {}, stop
+      ? `${name} wird sauber gestoppt (die Welt wird gespeichert). Danach ist er für alle nicht mehr erreichbar, bis du ihn wieder startest.`
+      : `${name} wird gestoppt und gleich wieder gestartet. Das dauert meist ein bis zwei Minuten, in denen niemand spielen kann.`),
+    players.length ? null : el('label', { class: 'checkline small' }, skip, el('span', {}, 'Nicht mehr fragen, wenn niemand online ist')));
+  return confirmDialog(stop ? 'Server wirklich stoppen?' : 'Server wirklich neu starten?', body, stop ? 'Ja, stoppen' : 'Ja, neu starten', {
+    onOk: () => { if (skip.checked) store.set(SKIP_EMPTY_KEY, '1'); },
+  });
+}
+
 // ====================================================================== Systeme
 
 const OS = {

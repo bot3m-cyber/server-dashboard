@@ -78,6 +78,8 @@ Angefragt werden nur Name und E-Mail-Adresse. Die Adresse muss von Google als be
 
 ## 3. Dienst (systemd)
 
+> **Einfacher:** `sudo ./install-service.sh` richtet den Dienst automatisch ein (siehe [DAUERBETRIEB.md](DAUERBETRIEB.md)). Die folgende Beschreibung zeigt dieselbe Einrichtung von Hand.
+
 `/etc/systemd/system/mcdash.service`:
 
 ```ini

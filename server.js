@@ -53,6 +53,7 @@ const access = require('./lib/access');
 const certs = require('./lib/certs');
 const listeners = require('./lib/listeners');
 const systemRoutes = require('./lib/system');
+const runstate = require('./lib/runstate');
 
 const HOSTED = hosted.enabled();
 const PORT = netconf.get().port; // Standard 3000, einstellbar im Reiter „Netzwerk & Betrieb“ (oder per Umgebungsvariable PORT)
@@ -261,6 +262,11 @@ mcRegistry.onCreate((inst) => {
   const inCtx = (fn) => ctx.run({ id: inst.id, user: null }, fn);
   inst.on('lines', (lines) => events.broadcast('lines', lines, tgt));
   inst.on('status', (s) => events.broadcast('status', s, tgt));
+  // Merken, was läuft: Wer bewusst gestoppt wird, bleibt nach einem Neustart aus. Beim Herunterfahren des Dashboards bleibt der Eintrag erhalten.
+  inst.on('status', (s) => {
+    if (s.state === 'startet' || s.state === 'läuft') runstate.markRunning(inst.id, { exclusive: !HOSTED });
+    else if (s.state === 'aus' && !shuttingDown) runstate.markStopped(inst.id);
+  });
   inst.on('players', (p) => events.broadcast('players', p, tgt));
   inst.on('activity', (a) => {
     events.broadcast('activity', a, tgt);
@@ -1067,6 +1073,7 @@ listeners.start(app).then(() => {
     console.log('  Achtung: Das Dashboard ist im Netzwerk erreichbar, aber ohne Zugangspasswort. Setze eines unter „Netzwerk & Betrieb“.');
   }
   certs.startRenewal((m) => console.log(`[HTTPS] ${m}`));
+  autoStartServers().catch((e) => console.error('Autostart:', e.message));
   if (process.argv.includes('--open') && !HOSTED) openBrowser(`http://localhost:${PORT}`);
 }).catch((e) => {
   if (e.code === 'EADDRINUSE') {
@@ -1079,6 +1086,28 @@ Port ${PORT} ist schon belegt. Läuft das Dashboard vielleicht schon in einem an
   }
   process.exit(1);
 });
+
+/** Startet nach dem Hochfahren die Server wieder, die beim letzten Beenden liefen (wenn der Haken gesetzt ist). */
+async function autoStartServers() {
+  const rs = runstate.get();
+  if (!rs.autoStart) return;
+  const known = new Set(config.list().map((p) => p.id));
+  const ids = rs.running.filter((id) => known.has(id));
+  if (!ids.length) return;
+  console.log(`Autostart: ${ids.length} Minecraft-Server ${ids.length === 1 ? 'wird' : 'werden'} wieder gestartet …`);
+  for (const id of HOSTED ? ids : ids.slice(-1)) {
+    await sleep(3000);
+    if (shuttingDown) return;
+    try {
+      if (!HOSTED) config.setActive(id); // damit das Dashboard den gestarteten Server anzeigt
+      await ctx.run({ id, user: null }, () => mcRegistry.get(id).start());
+    } catch (e) {
+      mcRegistry.get(id).sys(`Autostart nicht möglich: ${e.message}`);
+      console.error(`Autostart (${id}): ${e.message}`);
+      runstate.markStopped(id);
+    }
+  }
+}
 
 let shuttingDown = false;
 async function shutdown(signal) {

@@ -215,8 +215,8 @@ function paletteActions() {
   const st = state.server.state;
   const acts = [
     { icon: '▶', label: 'Server starten', ok: st === 'aus', run: () => api('POST', '/api/server/start') },
-    { icon: '■', label: 'Server stoppen', ok: st === 'läuft' || st === 'startet', run: () => api('POST', '/api/server/stop') },
-    { icon: '↻', label: 'Server neu starten', ok: st === 'läuft', run: () => api('POST', '/api/server/restart') },
+    { icon: '■', label: 'Server stoppen', ok: st === 'läuft' || st === 'startet', run: async () => { if (await confirmServerAction('stop')) await api('POST', '/api/server/stop'); } },
+    { icon: '↻', label: 'Server neu starten', ok: st === 'läuft', run: async () => { if (await confirmServerAction('restart')) await api('POST', '/api/server/restart'); } },
     { icon: '💾', label: 'Welt sichern', ok: true, run: async () => { jobDismissed = null; await api('POST', '/api/backups'); } },
     { icon: '✨', label: 'Mods verbessern (Client-Mods abschalten)', ok: true, run: () => { showTab('mods'); setTimeout(() => $('#btnImprove').click(), 400); } },
     { icon: '📋', label: 'Server-Adresse kopieren', ok: !!homeInfo.addr, run: () => navigator.clipboard.writeText(homeInfo.addr).then(() => toast('Adresse kopiert.', 'ok')) },

@@ -54,6 +54,10 @@ Im Reiter **„Netzwerk & Betrieb“** stellst du alles ein, ohne Dateien zu bea
 
 **Wichtig:** Ist das Dashboard im Netzwerk erreichbar, aber ohne Passwort, kann jeder im Netzwerk deine Server steuern. Das Dashboard weist oben darauf hin. Setze ein Passwort oder wähle „Nur dieser PC“.
 
+## Dauerbetrieb und Autostart
+
+Das Dashboard läuft als Dienst dauerhaft im Hintergrund und startet mit dem Rechner: unter Debian/Ubuntu mit `sudo ./install-service.sh`, unter Windows mit `install-autostart.bat`. Im Reiter „Netzwerk & Betrieb“ gibt es den Haken **„Minecraft-Server nach einem Neustart automatisch starten“**, damit du nach einem Neustart direkt spielen kannst. Vor dem Stoppen oder Neustarten eines Servers fragt das Dashboard nach. Alle Schritte: **[DAUERBETRIEB.md](DAUERBETRIEB.md)**.
+
 ## Updates, ohne Einstellungen zu verlieren
 
 Alle Einstellungen liegen im Ordner `data/` und stehen in `.gitignore`. `update.bat` (Windows) bzw. `./update.sh` (Linux/macOS) holt die neueste Version von GitHub und lässt `data/` unberührt. Bei einem ZIP-Download: den Ordner `data` in den neuen Programmordner kopieren.

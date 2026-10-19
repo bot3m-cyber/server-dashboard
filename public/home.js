@@ -322,8 +322,8 @@ $('#heroBtn').addEventListener('click', (e) => guarded(e.currentTarget, async ()
   await api('POST', '/api/server/start');
   hideCrash();
 }));
-$('#heroStop').addEventListener('click', (e) => guarded(e.currentTarget, () => api('POST', '/api/server/stop')));
-$('#heroRestart').addEventListener('click', (e) => guarded(e.currentTarget, () => api('POST', '/api/server/restart')));
+$('#heroStop').addEventListener('click', (e) => guarded(e.currentTarget, async () => { if (await confirmServerAction('stop')) await api('POST', '/api/server/stop'); }));
+$('#heroRestart').addEventListener('click', (e) => guarded(e.currentTarget, async () => { if (await confirmServerAction('restart')) await api('POST', '/api/server/restart'); }));
 $('#btnCopyAddr').addEventListener('click', () => {
   if (!homeInfo.addr) return;
   navigator.clipboard.writeText(homeInfo.addr).then(() => toast('Adresse kopiert.', 'ok'), () => toast('Kopieren nicht möglich.', 'error'));

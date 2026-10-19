@@ -227,8 +227,8 @@ $('#btnStart').addEventListener('click', (e) => guarded(e.currentTarget, async (
   hideCrash();
   showTab('console');
 }));
-$('#btnStop').addEventListener('click', (e) => guarded(e.currentTarget, () => api('POST', '/api/server/stop')));
-$('#btnRestart').addEventListener('click', (e) => guarded(e.currentTarget, () => api('POST', '/api/server/restart')));
+$('#btnStop').addEventListener('click', (e) => guarded(e.currentTarget, async () => { if (await confirmServerAction('stop')) await api('POST', '/api/server/stop'); }));
+$('#btnRestart').addEventListener('click', (e) => guarded(e.currentTarget, async () => { if (await confirmServerAction('restart')) await api('POST', '/api/server/restart'); }));
 
 // ====================================================================== Live-Verbindung (SSE)
 

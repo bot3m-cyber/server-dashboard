@@ -251,6 +251,29 @@ function modeCard(d) {
     el('div', { class: 'row' }, modeBtn), hostedBlock);
 }
 
+// ---------------------------------------------------------------- Dauerbetrieb & Autostart
+
+function autostartCard(d) {
+  const a = d.autostart;
+  const sv = d.service;
+  const cb = el('input', { type: 'checkbox', checked: a.enabled, role: 'switch' });
+  cb.addEventListener('change', () => guarded(null, async () => {
+    try {
+      await api('POST', '/api/system/autostart', { enabled: cb.checked });
+      toast(cb.checked ? 'Autostart eingeschaltet.' : 'Autostart ausgeschaltet.', 'ok');
+    } catch (e) { cb.checked = !cb.checked; throw e; }
+    loadSystem();
+  }));
+  const how = sv.systemd ? 'als Dienst (systemd). Er startet mit dem Rechner und nach einem Absturz von selbst neu.'
+    : sv.pm2 ? 'unter pm2.' : 'im Vordergrund. Nach einem Neustart des Rechners startet er nicht von selbst.';
+  return sysCard('Dauerbetrieb und Autostart',
+    el('p', {}, el('b', {}, 'Das Dashboard läuft '), how),
+    sv.systemd ? null : el('p', { class: 'muted small' }, 'Damit es dauerhaft läuft und mit dem Rechner startet, richte es als Dienst bzw. Autostart ein. Die Anleitung steht in DAUERBETRIEB.md (Linux: sudo ./install-service.sh, Windows: install-autostart.bat).'),
+    el('label', { class: 'checkline switch-line' }, cb, el('span', {}, el('b', {}, 'Minecraft-Server nach einem Neustart automatisch starten'), el('br'),
+      el('span', { class: 'muted small' }, 'Startet das Dashboard, startet es den Server wieder, der zuletzt lief. Hast du ihn vorher im Dashboard bewusst gestoppt, bleibt er aus. So kannst du nach einem Neustart des Rechners direkt spielen.'))),
+    a.enabled ? el('p', { class: 'small' }, a.servers.length ? ['Wird beim nächsten Start gestartet: ', el('b', {}, a.servers.map((s) => s.name).join(', '))] : 'Zurzeit läuft kein Server, der beim nächsten Start gestartet würde.') : null);
+}
+
 // ---------------------------------------------------------------- Neustart & Speicherort
 
 function infoCard(d) {
@@ -272,7 +295,7 @@ function renderSystem(d) {
   document.getElementById('netWarn')?.remove(); // die Hinweise stehen auf dieser Seite selbst
   const box = $('#systemBody');
   const warn = d.warnings.map((w) => el('div', { class: `banner ${w.level === 'warn' ? 'warn' : 'info'}` }, w.text));
-  box.replaceChildren(...warn, netCard(d), passwordCard(d), httpsCard(d), modeCard(d), infoCard(d));
+  box.replaceChildren(...warn, netCard(d), passwordCard(d), httpsCard(d), modeCard(d), autostartCard(d), infoCard(d));
 }
 
 async function loadSystem() {
