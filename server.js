@@ -189,15 +189,8 @@ if (!HOSTED) {
   app.use(access.middleware);
 }
 app.use('/icons', express.static(modmeta.ICON_DIR, { maxAge: '7d', fallthrough: true }));
-// Die Startseite bekommt Versionsnummern an allen Dateien und wird nie zwischengespeichert. Alle Dateien müssen vor der Nutzung
-// beim Server nachfragen (ETag), damit Browser nach einem Update nie alte und neue Dateien mischen.
-const staticOpts = { index: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
-app.get(['/', '/index.html'], (req, res, next) => {
-  try {
-    res.set('Cache-Control', 'no-store');
-    res.type('html').send(require('./lib/assets').indexHtml());
-  } catch (e) { next(e); }
-});
+// Alle Dateien müssen vor der Nutzung beim Server nachfragen (ETag), damit Browser nach einem Update keine alten Dateien weiterverwenden.
+const staticOpts = { index: 'index.html', setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
 app.use(express.static(PUBLIC_DIR, staticOpts));
 if (HOSTED) authRoutes.mountApi(app);
 systemRoutes.mount(app, HOSTED, { startedAt: STARTED_AT });
