@@ -1,6 +1,23 @@
 'use strict';
 /* Server-Dashboard – Oberfläche (ohne Framework) */
 
+// Zeigt Fehler beim Laden sichtbar an (auf dem Handy gibt es keine Konsole). Verschwindet, sobald die Seite fertig aufgebaut ist.
+(function bootGuard() {
+  const show = (msg) => {
+    const box = document.getElementById('bootMsg');
+    if (!box) return; // Seite läuft schon, einzelne Fehler zeigen die Meldungen unten
+    box.hidden = false;
+    box.classList.add('error');
+    box.textContent = `Die Seite konnte nicht vollständig geladen werden: ${msg}. Bitte neu laden (bei hartnäckigen Fällen: Browser-Cache leeren). Falls es bleibt, schick diese Meldung an den Betreiber.`;
+  };
+  window.addEventListener('error', (e) => show(`${e.message || 'Fehler'}${e.filename ? ` (${String(e.filename).split('/').pop()}:${e.lineno})` : ''}`));
+  window.addEventListener('unhandledrejection', (e) => show(String(e.reason?.message || e.reason || 'Fehler')));
+  setTimeout(() => {
+    const box = document.getElementById('bootMsg');
+    if (box && !box.classList.contains('error')) { box.classList.add('error'); box.textContent = 'Das Dashboard antwortet nicht. Bitte die Verbindung prüfen und die Seite neu laden.'; }
+  }, 12000);
+})();
+
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
@@ -36,10 +53,16 @@ async function api(method, url, body) {
     opt.body = JSON.stringify(body);
   }
   let res;
+  // Eine hängende Verbindung (z. B. schwaches Handy-Netz) soll nicht ewig warten
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), url.includes('/upload') ? 600000 : 60000);
+  opt.signal = ctl.signal;
   try {
     res = await fetch(url, opt);
   } catch {
     throw new Error('Das Dashboard ist nicht erreichbar. Läuft das Fenster mit start.bat noch?');
+  } finally {
+    clearTimeout(timer);
   }
   let data = null;
   try { data = await res.json(); } catch { /* keine JSON-Antwort */ }
@@ -100,6 +123,7 @@ function showTab(name) {
   for (const b of $$('#tabs button')) b.classList.toggle('active', b.dataset.tab === name);
   if (location.hash !== `#${name}`) history.replaceState(null, '', `#${name}`);
   Promise.resolve(loaders[name]()).catch((e) => toast(e.message, 'error'));
+  document.getElementById('bootMsg')?.remove();
   window.scrollTo(0, 0); // jede Seite beginnt oben
   if (name === 'console') scrollConsole(true);
 }
@@ -232,10 +256,38 @@ $('#btnRestart').addEventListener('click', (e) => guarded(e.currentTarget, async
 
 // ====================================================================== Live-Verbindung (SSE)
 
+// Live-Verbindung (Server-Sent Events). Kommt über sie nichts an (z. B. im Mobilfunknetz), fragt die Seite alle 3 Sekunden nach.
+const live = { lastEvent: 0, ok: false, seq: null };
+
+async function pollSnapshot() {
+  try {
+    const snap = await api('GET', `/api/snapshot${live.seq != null ? `?since=${live.seq}` : ''}`);
+    renderStatus(snap.status);
+    if (snap.reset) {
+      $('#console').textContent = '';
+      if (typeof recentLines !== 'undefined') recentLines.length = 0;
+    }
+    appendLines(snap.lines);
+    live.seq = snap.seq;
+    if (snap.job) renderJob(snap.job);
+    $('#connLost').hidden = true;
+  } catch {
+    $('#connLost').hidden = false;
+  }
+}
+
+setInterval(() => {
+  const stale = !live.ok || Date.now() - live.lastEvent > 60000;
+  if (stale) pollSnapshot();
+  else live.seq = null;
+}, 3000);
+
 function connect() {
   const es = new EventSource('/api/events');
   es.onopen = () => { $('#connLost').hidden = true; };
-  es.onerror = () => { $('#connLost').hidden = false; };
+  es.onerror = () => { live.ok = false; };
+  const addOrig = es.addEventListener.bind(es);
+  es.addEventListener = (name, fn) => addOrig(name, (e) => { live.lastEvent = Date.now(); live.ok = true; fn(e); });
   es.addEventListener('status', (e) => renderStatus(JSON.parse(e.data)));
   es.addEventListener('history', (e) => {
     $('#console').textContent = '';
@@ -1052,13 +1104,19 @@ $('#btnBackup').addEventListener('click', (e) => guarded(e.currentTarget, async 
 (async function init() {
   connect();
   let initial = location.hash.slice(1);
-  try {
-    const s = await api('GET', '/api/setup');
-    state.setup = s;
-    renderSetup(s);
-    if (!loaders[initial]) initial = s.complete ? 'home' : 'setup';
-  } catch (e) {
-    toast(e.message, 'error');
+  const setupP = api('GET', '/api/setup').catch((e) => { toast(e.message, 'error'); return null; });
+  // Antwortet der Server langsam (schwaches Handy-Netz), zeigen wir die Seite nach 1,5 s schon an, statt eine leere Seite zu lassen
+  const first = await Promise.race([setupP, new Promise((resolve) => setTimeout(() => resolve('langsam'), 1500))]);
+  if (first === 'langsam') {
+    showTab(loaders[initial] ? initial : 'home');
+    const late = await setupP;
+    if (late) { state.setup = late; renderSetup(late); }
+    return;
+  }
+  if (first) {
+    state.setup = first;
+    renderSetup(first);
+    if (!loaders[initial]) initial = first.complete ? 'home' : 'setup';
   }
   showTab(initial || 'setup');
 })();

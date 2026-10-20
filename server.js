@@ -257,6 +257,16 @@ app.get('/api/events', (req, res) => {
   events.addClient(res, (t) => (t.userId ? HOSTED && t.userId === uid : t.pid ? t.pid === pid : !HOSTED));
 });
 
+// Ersatz für die Live-Verbindung: Manche Netze (Mobilfunk, Proxys) lassen Server-Sent Events nicht durch.
+// Dann fragt die Seite Status und Konsole regelmäßig ab. since = Zähler der zuletzt gesehenen Zeile.
+app.get('/api/snapshot', api(async (req) => {
+  const seq = mc.lineSeq;
+  const since = Number(req.query.since);
+  const have = req.query.since !== undefined && Number.isFinite(since) && since >= 0 && since <= seq;
+  const count = have ? Math.min(seq - since, mc.lines.length) : mc.lines.length;
+  return { status: mc.info(), seq, reset: !have, lines: count ? mc.lines.slice(-count) : [], job: jobs.snapshot() };
+}));
+
 /** Verteilt die Ereignisse jedes Servers (auch künftiger) an die richtigen Browser. */
 mcRegistry.onCreate((inst) => {
   const tgt = { pid: inst.id };

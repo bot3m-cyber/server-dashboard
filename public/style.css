@@ -729,3 +729,11 @@ kbd { display: inline-block; padding: 1px 6px; border: 1px solid var(--border); 
 .icon-choice:hover, .icon-choice:focus-visible { border-color: var(--accent); transform: translateY(-2px); outline: none; }
 .icon-choice img { width: 64px; height: 64px; image-rendering: pixelated; }
 .sc-own-icon { width: 52px; height: 52px; border-radius: 10px; flex: none; image-rendering: pixelated; border: 1px solid var(--border); background: #101821; }
+
+/* Ladehinweis und Handy-Feinschliff */
+.boot-msg { margin-top: 16px; }
+.boot-msg[hidden] { display: none; }
+@media (max-width: 560px) {
+  .btn { max-width: 100%; white-space: normal; }
+  .row > .btn.primary { text-align: left; }
+}
