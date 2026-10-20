@@ -3,7 +3,7 @@
 
 const ME = { user: null, usage: null };
 
-const gb = (bytes) => `${(bytes / 1024 ** 3).toFixed(bytes < 1024 ** 3 ? 2 : 1).replace('.', ',')} GB`;
+const gb = (bytes) => `${(bytes / 1024 ** 3).toFixed(bytes < 1024 ** 3 ? 2 : 1).replace('.', I18N.dec)} GB`;
 
 function usageBars(u) {
   const q = u.quota;

@@ -252,15 +252,15 @@ function tickHome() {
 
   const t = s.state === 'läuft' ? s.tps : null;
   const tv = $('#tileTps');
-  tv.textContent = t ? t.tps.toFixed(1).replace('.', ',') : '–';
+  tv.textContent = t ? t.tps.toFixed(1).replace('.', I18N.dec) : '–';
   tv.className = `tile-value ${t ? (t.tps >= 19 ? 'good' : t.tps >= 15 ? 'warnc' : 'bad') : ''}`;
-  $('#tileTpsSub').textContent = t ? `${t.mspt != null ? `Tick-Zeit ${t.mspt.toFixed(1).replace('.', ',')} ms · ` : ''}${t.tps >= 19 ? 'läuft flüssig' : t.tps >= 15 ? 'leichte Ruckler' : 'Server hängt'}`
+  $('#tileTpsSub').textContent = t ? `${t.mspt != null ? `Tick-Zeit ${t.mspt.toFixed(1).replace('.', I18N.dec)} ms · ` : ''}${t.tps >= 19 ? 'läuft flüssig' : t.tps >= 15 ? 'leichte Ruckler' : 'Server hängt'}`
     : s.state === 'läuft' ? 'wird gemessen …' : '20 ist perfekt';
 
   // Der Java-Prozess belegt mehr als das Heap-Limit (Xmx), weil Mods auch Nativspeicher brauchen.
   const mem = homeInfo.memMb;
   const show = s.state !== 'aus' && mem;
-  $('#tileMem').textContent = show ? `${(mem / 1024).toFixed(1).replace('.', ',')} GB` : '–';
+  $('#tileMem').textContent = show ? `${(mem / 1024).toFixed(1).replace('.', I18N.dec)} GB` : '–';
   $('#tileMemSub').textContent = state.ram ? `Heap-Limit ${state.ram.xmxGb} GB · PC hat ${state.ram.totalGb} GB` : '';
   spark($('#sparkMem'), homeInfo.memHist, (state.ram?.totalGb || 16) * 1024 * 0.5);
   spark($('#sparkPlayers'), homeInfo.playHist, s.maxPlayers || 4);

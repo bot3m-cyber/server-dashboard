@@ -55,6 +55,9 @@ main() {
     chmod +x ./*.sh 2>/dev/null
   fi
 
+  # Vermerken, welcher Stand jetzt installiert ist (für die Update-Anzeige im Dashboard; klappt nur mit Internet)
+  if command -v node >/dev/null 2>&1 && [ ! -d .git ]; then node lib/updater.js --mark-current 2>/dev/null; fi
+
   if command -v npm >/dev/null 2>&1; then
     npm install --omit=dev || { echo "npm install ist fehlgeschlagen."; return 1; }
   else

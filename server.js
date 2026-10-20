@@ -54,6 +54,7 @@ const certs = require('./lib/certs');
 const listeners = require('./lib/listeners');
 const systemRoutes = require('./lib/system');
 const runstate = require('./lib/runstate');
+const legal = require('./lib/legal');
 const servericons = require('./lib/servericons');
 
 const HOSTED = hosted.enabled();
@@ -146,11 +147,30 @@ function hardenHeaders(req, res, next) {
 }
 app.use(express.json({ limit: '2mb' }));
 
+// Impressum und Datenschutz sind ohne Anmeldung erreichbar (Pflichtangaben, Verlinkung auch von der Anmeldeseite)
+for (const page of legal.PAGES) {
+  app.get(`/${page}`, (req, res) => {
+    const html = legal.render(page, String(req.query.lang || 'de'));
+    if (!html) return res.status(404).end();
+    res.set('Cache-Control', 'no-cache').type('html').send(html);
+  });
+}
+
 // Für die Wartezeit nach einem Neustart: die Seite fragt (ohne Anmeldung), ob das Dashboard wieder da ist
 app.get('/api/system/ping', (req, res) => res.json({ ok: true, hosted: HOSTED, startedAt: STARTED_AT }));
 
+// Sprachdateien (ohne Anmeldung, damit auch die Anmeldeseite übersetzt werden kann)
+const langs = require('./lib/lang');
+app.get('/api/languages', (req, res) => res.set('Cache-Control', 'no-store').json({ languages: langs.list() }));
+app.get('/lang/:file', (req, res) => {
+  const m = /^([a-z0-9-]+)\.json$/i.exec(req.params.file);
+  const l = m && langs.get(m[1]);
+  if (!l) return res.status(404).json({ error: 'Diese Sprache gibt es nicht.' });
+  return res.set('Cache-Control', 'no-cache').json(l);
+});
+
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const PUBLIC_PAGES = new Set(['/login.html', '/login.js', '/login.css', '/style.css']);
+const PUBLIC_PAGES = new Set(['/login.html', '/login.js', '/login.css', '/style.css', '/legal.css', '/i18n.js']);
 
 if (HOSTED) {
   // Ohne Anmeldung ist nur die Anmeldeseite erreichbar
@@ -318,7 +338,10 @@ mcRegistry.onCreate((inst) => {
 
 // ---------------------------------------------------------------- Einrichtung
 
-app.get('/api/app-info', api(async () => ({ hosted: HOSTED, platform: process.platform })));
+app.get('/api/app-info', api(async () => {
+  const v = await require('./lib/updater').installed().catch(() => null);
+  return { hosted: HOSTED, platform: process.platform, version: v ? { sha: v.sha ? v.sha.slice(0, 7) : null, dateMs: v.dateMs || null, kind: v.kind } : null };
+}));
 
 app.get('/api/setup', api(async () => {
   const st = setup.status();
@@ -1127,6 +1150,7 @@ listeners.start(app).then(() => {
   }
   certs.startRenewal((m) => console.log(`[HTTPS] ${m}`));
   autoStartServers().catch((e) => console.error('Autostart:', e.message));
+  require('./lib/updater').startScheduler((m) => console.log(m));
   if (process.argv.includes('--open') && !HOSTED) openBrowser(`http://localhost:${PORT}`);
 }).catch((e) => {
   if (e.code === 'EADDRINUSE') {

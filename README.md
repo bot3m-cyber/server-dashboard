@@ -62,6 +62,16 @@ Das Dashboard läuft als Dienst dauerhaft im Hintergrund und startet mit dem Rec
 
 Alle Einstellungen liegen im Ordner `data/` und stehen in `.gitignore`. `update.bat` (Windows) bzw. `./update.sh` (Linux/macOS) holt die neueste Version von GitHub und lässt `data/` unberührt. Bei einem ZIP-Download: den Ordner `data` in den neuen Programmordner kopieren.
 
+**Update im Dashboard:** Unter „Netzwerk & Betrieb“ → „Dashboard aktualisieren“ prüft das Dashboard bei GitHub, ob es eine neue Version gibt (einmal täglich, abschaltbar), zeigt die Änderungsliste und installiert sie per Knopfdruck. Der alte Programmstand wird vorher nach `data/update-backup` gesichert, bei einem Fehler wird zurückgesetzt, danach startet das Dashboard neu. Dazu müssen alle Minecraft-Server gestoppt sein. Einstellungen, Server und Welten bleiben unberührt.
+
+## Sprachen
+
+Das Dashboard gibt es auf Deutsch und Englisch (Einstellungen → Sprache). Eine Sprache ist nur eine Datei: `public/lang/<code>.json` (kommt mit Updates) oder `data/lang/<code>.json` (eigene Sprachen und Anpassungen, bleiben bei Updates erhalten). Schlüssel ist der deutsche Originaltext, der Wert die Übersetzung; fehlende Sätze bleiben deutsch. Neue Sprache: `en.json` nach `data/lang/fr.json` kopieren, `_meta` anpassen, Werte übersetzen, Seite neu laden. „Fehlende Sätze exportieren“ in den Einstellungen liefert eine Vorlage. Impressum und Datenschutz haben eigene Dateien in `legal/` (`data/legal/` geht vor).
+
+## Impressum und Datenschutz
+
+Beide Seiten sind ohne Anmeldung erreichbar (`/impressum`, `/datenschutz`) und unten auf jeder Seite verlinkt. Es erscheint nur der GitHub-Benutzername als Betreiber (änderbar unter Netzwerk & Betrieb). Das sind Vorlagen für ein privates, nicht kommerzielles Projekt, keine Rechtsberatung. Für den öffentlichen oder geschäftlichen Einsatz kann in Deutschland ein vollständiges Impressum Pflicht sein.
+
 ## Einrichtung (einmalig)
 
 1. **Modpack wählen:** `.mrpack`-Datei hochladen oder den Pfad eingeben.

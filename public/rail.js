@@ -56,8 +56,8 @@ function renderRail() {
     el('div', { class: 'rail-grid' },
       railStat('Laufzeit', running && s.readyAt ? fmtDuration(Date.now() - s.readyAt) : '–'),
       railStat('Spieler', running ? `${players.length}${s.maxPlayers ? ` / ${s.maxPlayers}` : ''}` : '–'),
-      railStat('TPS', running && s.tps ? s.tps.tps.toFixed(1).replace('.', ',') : '–'),
-      railStat('RAM', mem && s.state !== 'aus' ? `${(mem / 1024).toFixed(1).replace('.', ',')} GB` : '–'))));
+      railStat('TPS', running && s.tps ? s.tps.tps.toFixed(1).replace('.', I18N.dec) : '–'),
+      railStat('RAM', mem && s.state !== 'aus' ? `${(mem / 1024).toFixed(1).replace('.', I18N.dec)} GB` : '–'))));
 
   cards.push(railCard(`Spieler online${running ? ` (${players.length})` : ''}`,
     el('div', { class: 'rail-players' }, ...(running && players.length ? players.slice(0, 12).map((n) => el('span', { class: 'rail-player', title: n }, head(n, 26), n))

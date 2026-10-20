@@ -195,7 +195,7 @@ function pollCert() {
         clearInterval(SYS.poll);
         if (d.https.status.lastError && !d.https.status.exists) toast('Das Zertifikat konnte nicht erstellt werden. Details stehen unten.', 'error', 10000);
         else if (d.https.status.exists) toast('Zertifikat bereit.', 'ok');
-        if (state.tab === 'system') renderSystem(d);
+        if (state.tab === 'system') loadSystem();
       }
     } catch { clearInterval(SYS.poll); }
   }, 2500);
@@ -274,6 +274,80 @@ function autostartCard(d) {
     a.enabled ? el('p', { class: 'small' }, a.servers.length ? ['Wird beim nächsten Start gestartet: ', el('b', {}, a.servers.map((s) => s.name).join(', '))] : 'Zurzeit läuft kein Server, der beim nächsten Start gestartet würde.') : null);
 }
 
+// ---------------------------------------------------------------- Updates des Dashboards
+
+const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString('de-DE') : '–');
+
+function updateCard(d, up) {
+  if (!up) return null;
+  const inst = up.installed;
+  const ver = inst.sha ? `Version ${inst.sha.slice(0, 7)}${inst.dateMs ? ` vom ${fmtDay(inst.dateMs)}` : ''}` : `Stand vom ${fmtDay(inst.dateMs)} (genaue Version unbekannt)`;
+  const running = d.runningServers > 0;
+  const auto = el('input', { type: 'checkbox', checked: up.autoCheck });
+  auto.addEventListener('change', () => guarded(null, async () => { await api('POST', '/api/update/settings', { autoCheck: auto.checked }); toast(auto.checked ? 'Tägliche Prüfung eingeschaltet.' : 'Tägliche Prüfung ausgeschaltet.', 'ok'); }));
+  const list = up.available
+    ? el('details', { open: up.pending.length <= 6 }, el('summary', {}, `${up.pending.length} Änderung${up.pending.length === 1 ? '' : 'en'} ansehen`),
+      el('ul', { class: 'plain-list small' }, ...up.pending.slice(0, 40).map((c) => el('li', {}, el('span', { class: 'muted' }, `${fmtDay(Date.parse(c.date))} · `), c.title))))
+    : null;
+  const status = up.error
+    ? el('div', { class: 'banner warn' }, `Die letzte Prüfung hat nicht geklappt: ${up.error}`)
+    : up.available
+      ? el('div', { class: 'banner ok' }, el('b', {}, 'Eine neue Version ist verfügbar.'), list)
+      : el('div', { class: 'banner info' }, up.checkedAt ? `Du hast die neueste Version (geprüft am ${new Date(up.checkedAt).toLocaleString('de-DE')}).` : 'Noch nicht nach Updates gesucht.');
+  return sysCard('Updates',
+    el('p', {}, el('b', {}, 'Installiert: '), ver, el('span', { class: 'muted small' }, inst.kind === 'git' ? ' · Git-Ordner' : ' · aus ZIP installiert')),
+    status,
+    el('div', { class: 'row' },
+      el('button', {
+        class: 'btn', type: 'button',
+        onclick: (e) => guarded(e.currentTarget, async () => { await api('POST', '/api/update/check'); loadSystem(); }),
+      }, 'Jetzt nach Updates suchen'),
+      up.available ? el('button', {
+        class: 'btn primary', type: 'button', disabled: running, title: running ? 'Zuerst alle Minecraft-Server stoppen' : '',
+        onclick: (e) => guarded(e.currentTarget, installUpdate),
+      }, '⬇ Jetzt aktualisieren') : null,
+      running && up.available ? el('span', { class: 'muted small' }, 'Zum Aktualisieren erst alle Minecraft-Server stoppen.') : null),
+    el('label', { class: 'checkline' }, auto, el('span', {}, 'Einmal am Tag automatisch nach Updates suchen ', el('span', { class: 'muted small' }, '(fragt GitHub an, siehe Datenschutz)'))),
+    el('p', { class: 'muted small' }, 'Beim Aktualisieren wird nur der Programmcode ersetzt. Einstellungen, Server und Welten (Ordner data, server, servers) bleiben unberührt, der alte Programmstand wird in data/update-backup gesichert. Danach startet das Dashboard von selbst neu.'));
+}
+
+async function installUpdate() {
+  const ok = await confirmDialog('Dashboard jetzt aktualisieren?',
+    el('div', {}, el('p', {}, 'Die neue Version wird heruntergeladen und installiert, danach startet das Dashboard neu. Das dauert etwa eine Minute. Währenddessen ist die Seite kurz nicht erreichbar.'),
+      el('p', { class: 'muted small' }, 'Deine Einstellungen, Server und Welten bleiben unverändert.')), 'Ja, aktualisieren');
+  if (!ok) return;
+  jobDismissed = null;
+  const { job } = await api('POST', '/api/update/install');
+  toast('Das Update läuft …', 'info', 6000);
+  for (let i = 0; i < 400; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    const j = state.job;
+    if (j && j.id === job.id && !j.running) {
+      if (j.error) { toast(j.error, 'error', 15000); return; }
+      await waitForRestart('');
+      return;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- Impressum und Datenschutz
+
+function legalCard(d) {
+  const l = d.legal;
+  const name = sysInput(l.custom ? l.operator : '', { placeholder: l.defaultOperator || 'GitHub-Benutzername' });
+  return sysCard('Impressum und Datenschutz',
+    el('p', { class: 'muted' }, 'Die beiden Seiten sind ohne Anmeldung erreichbar und stehen unten auf jeder Seite verlinkt. Als Betreiber erscheint nur ein GitHub-Benutzername, kein Klarname.'),
+    el('div', { class: 'row' }, sysField('Betreiber (GitHub-Benutzername)', name, `Leer lassen für den Standard: ${l.defaultOperator || '–'}`)),
+    el('div', { class: 'row' },
+      el('button', {
+        class: 'btn primary', type: 'button',
+        onclick: (e) => guarded(e.currentTarget, async () => { await api('POST', '/api/system/legal', { operator: name.value }); toast('Gespeichert.', 'ok'); loadSystem(); }),
+      }, 'Speichern'),
+      el('a', { class: 'btn', href: '/impressum', 'data-legal': '', target: '_blank', rel: 'noopener' }, 'Impressum ansehen'),
+      el('a', { class: 'btn', href: '/datenschutz', 'data-legal': '', target: '_blank', rel: 'noopener' }, 'Datenschutz ansehen')),
+    el('p', { class: 'muted small' }, 'Eigene Texte: Lege Dateien gleichen Namens in data/legal/ ab (impressum.de.html, impressum.en.html, datenschutz.de.html, datenschutz.en.html). Sie gehen vor und bleiben bei Updates erhalten. Hinweis: Das sind Vorlagen für ein privates Projekt, keine Rechtsberatung.'));
+}
+
 // ---------------------------------------------------------------- Neustart & Speicherort
 
 function infoCard(d) {
@@ -290,16 +364,18 @@ function infoCard(d) {
     el('p', { class: 'muted small' }, 'Alle Einstellungen (Netzwerk, Benutzer, Zertifikate, Server-Liste) liegen in diesem Ordner, getrennt vom Programmcode. Ein Update von GitHub (git pull oder update.bat / update.sh) verändert ihn nicht. Wenn du das Programm als ZIP neu herunterlädst, kopiere den Ordner „data“ in den neuen Programmordner.'));
 }
 
-function renderSystem(d) {
+function renderSystem(d, up) {
   SYS.data = d;
   document.getElementById('netWarn')?.remove(); // die Hinweise stehen auf dieser Seite selbst
+  document.getElementById('updNotice')?.remove();
   const box = $('#systemBody');
   const warn = d.warnings.map((w) => el('div', { class: `banner ${w.level === 'warn' ? 'warn' : 'info'}` }, w.text));
-  box.replaceChildren(...warn, netCard(d), passwordCard(d), httpsCard(d), modeCard(d), autostartCard(d), infoCard(d));
+  box.replaceChildren(...warn, netCard(d), passwordCard(d), httpsCard(d), modeCard(d), autostartCard(d), updateCard(d, up), legalCard(d), infoCard(d));
 }
 
 async function loadSystem() {
-  renderSystem(await api('GET', '/api/system'));
+  const [d, up] = await Promise.all([api('GET', '/api/system'), api('GET', '/api/update').catch(() => null)]);
+  renderSystem(d, up);
 }
 
 (function installSystemTab() {
@@ -335,4 +411,44 @@ async function loadSystem() {
         el('button', { class: 'btn small ghost', type: 'button', onclick: () => { try { sessionStorage.setItem('netWarnHidden', '1'); } catch { /* egal */ } bar.remove(); } }, 'Später')));
     $('main').before(bar);
   } catch { /* Zugriff verweigert oder nicht verfügbar: dann gibt es nichts anzuzeigen */ }
+})();
+
+// Version in der Fußzeile und Hinweis auf neue Versionen (nur für Administratoren sichtbar, die Abfrage selbst läuft ohne Netzwerkzugriff)
+(async function updateNotice() {
+  try {
+    await APP.ready;
+    if (APP.version?.sha) $('#footVersion').textContent = `· Version ${APP.version.sha}`;
+    else if (APP.version?.dateMs) $('#footVersion').textContent = `· Stand ${new Date(APP.version.dateMs).toLocaleDateString('de-DE')}`;
+    const up = await api('GET', '/api/update');
+    if (!up.available) return;
+    const key = `updHidden:${up.latest?.sha}`;
+    if (sessionStorage.getItem(key)) return;
+    const bar = el('div', { id: 'updNotice', class: 'banner ok net-warn', role: 'status' },
+      el('span', {}, `⬇ Eine neue Version des Dashboards ist verfügbar (${up.pending.length} Änderung${up.pending.length === 1 ? '' : 'en'}).`),
+      el('span', { class: 'net-warn-actions' },
+        el('button', { class: 'btn small primary', type: 'button', onclick: () => { showTab('system'); } }, 'Ansehen'),
+        el('button', { class: 'btn small ghost', type: 'button', onclick: () => { try { sessionStorage.setItem(key, '1'); } catch { /* egal */ } bar.remove(); } }, 'Später')));
+    $('main').before(bar);
+  } catch { /* kein Zugriff oder nicht verfügbar */ }
+})();
+
+// ---------------------------------------------------------------- Sprache
+(function installLanguageUi() {
+  const sel = document.getElementById('langSelect');
+  if (!sel || !window.I18N) return;
+  I18N.languages().then((list) => {
+    sel.replaceChildren(...list.map((l) => el('option', { value: l.code }, l.name)));
+    sel.value = list.some((l) => l.code === I18N.lang) ? I18N.lang : 'de';
+  });
+  sel.addEventListener('change', () => I18N.setLang(sel.value));
+  document.getElementById('btnLangMissing')?.addEventListener('click', () => {
+    const txt = I18N.exportMissing();
+    const a = el('a', { href: URL.createObjectURL(new Blob([txt], { type: 'application/json' })), download: `missing-${I18N.lang}.json` });
+    document.body.append(a); a.click(); a.remove();
+  });
+  // Impressum und Datenschutz in der gewählten Sprache öffnen
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[data-legal]');
+    if (a && I18N.lang !== 'de') a.href = `${a.getAttribute('href').split('?')[0]}?lang=${I18N.lang}`;
+  });
 })();

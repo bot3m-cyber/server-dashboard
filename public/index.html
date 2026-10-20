@@ -6,6 +6,7 @@
   <title>Server-Dashboard</title>
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
+  <script src="i18n.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -110,7 +111,7 @@
             </div>
             <div class="row">
               <button class="btn small" id="btnIconChange" type="button"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#image"/></svg> Server-Icon ändern</button>
-              <span class="muted small">fünf fertige Icons oder eigenes PNG</span>
+              <span class="muted small">zehn fertige Icons oder eigenes PNG</span>
             </div>
             <div class="addr-row"><span class="muted small">Adresse im WLAN</span><b class="mono" id="tileAddr">–</b><button class="btn small ghost" id="btnCopyAddr">Kopieren</button></div>
           </div>
@@ -626,6 +627,23 @@
         </details>
         <div class="row"><button id="btnThemeReset" type="button" class="btn ghost">Standard wiederherstellen</button></div>
       </div>
+      <div class="card" id="langCard">
+        <h2>Sprache</h2>
+        <p class="muted small">Die Auswahl wird auf diesem Gerät gespeichert. Sprachen sind einfache Dateien und lassen sich austauschen oder erweitern.</p>
+        <div class="row">
+          <select id="langSelect" data-no-i18n aria-label="Sprache"></select>
+          <button id="btnLangMissing" type="button" class="btn ghost">Fehlende Sätze exportieren</button>
+        </div>
+        <details class="custom-colors">
+          <summary>Eigene Sprache hinzufügen oder anpassen</summary>
+          <ol class="muted small">
+            <li>Kopiere die Datei public/lang/en.json nach data/lang/fr.json (Beispiel für Französisch). Der Ordner data bleibt bei Updates erhalten.</li>
+            <li>Passe oben im Abschnitt _meta den Namen (erscheint in der Auswahl) und locale (steuert Datum und Zahlen, z. B. fr-FR) an.</li>
+            <li>Übersetze die Werte unter strings. Der Schlüssel ist der deutsche Originaltext und bleibt unverändert. Platzhalter wie {0} und {1} müssen im Text bleiben.</li>
+            <li>Seite neu laden, die neue Sprache steht in der Auswahl. Fehlende Sätze bleiben deutsch. „Fehlende Sätze exportieren“ liefert eine Vorlage mit allem, was auf den bisher geöffneten Seiten noch nicht übersetzt war.</li>
+          </ol>
+        </details>
+      </div>
       <div class="card">
         <h2>Arbeitsspeicher (RAM)</h2>
         <p class="muted" id="ramTotal"></p>
@@ -865,6 +883,10 @@
       </div>
     </section>
   </main>
+
+  <footer class="site-footer">
+    Server-Dashboard <span id="footVersion"></span> · <a href="/impressum" data-legal>Impressum</a> · <a href="/datenschutz" data-legal>Datenschutz</a>
+  </footer>
 
   <aside id="rail" class="rail" aria-label="Info-Leiste"></aside>
 

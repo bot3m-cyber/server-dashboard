@@ -61,6 +61,7 @@ if errorlevel 8 (
 rmdir /s /q "%TMPD%" >nul 2>nul
 
 :npm
+if not exist ".git" node lib\updater.js --mark-current >nul 2>nul
 call npm install --omit=dev
 echo.
 echo  Fertig. Deine Einstellungen ^(data^) und Server sind unveraendert.
