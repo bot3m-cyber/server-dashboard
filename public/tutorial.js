@@ -306,6 +306,13 @@ const HELP = [
     'Dein Konto kann nur du sehen: Andere Benutzer haben keinen Zugriff auf deine Server, Dateien oder Backups.',
     'Zu viele falsche Passwörter sperren die Anmeldung kurz. Das schützt vor Raten.',
     'Passwort ändern und Abmelden findest du oben rechts im Benutzermenü.']],
+  ['Tastenkürzel', null, [
+    'Strg+K: Befehlspalette. Tippe, was du tun willst („Server starten“, „Welt sichern“ …), und bestätige mit Enter.',
+    'Strg+F: Auf der aktuellen Seite suchen und zu den Treffern springen.',
+    'Esc: Fenster, Suche oder Befehlspalette schließen.',
+    'Strg+S: Im Dateimanager die geöffnete Datei speichern.',
+    'Pfeil hoch / runter in der Konsole: frühere Befehle wieder holen.',
+    'Auf dem Mac gilt Cmd statt Strg.']],
   ['Wenn etwas nicht klappt', null, [
     'Server startet nicht: Im Reiter „Server & Konsole“ die letzten roten Zeilen lesen. Häufig fehlt die EULA-Zustimmung, oder der RAM ist zu hoch eingestellt.',
     'Nur du kannst dich verbinden: Prüfe Adresse, Port und ob der Server wirklich „Läuft“ anzeigt.',
@@ -334,8 +341,6 @@ document.querySelector('main').append(el('section', { id: 'tab-help', class: 'ta
   el('div', { id: 'helpBody' })));
 loaders.help = () => APP.ready.then(renderHelp);
 
-const helpBtn = el('button', { id: 'btnTutorial', class: 'btn icon-btn round-help', type: 'button', title: 'Erste Schritte / Hilfe', 'aria-label': 'Erste Schritte öffnen', onclick: openTutorial }, '?');
-$('#btnAppearance').before(helpBtn);
 
 if (!APP.hosted) {
   APP.ready.then(() => { if (!APP.hosted) setTimeout(maybeShowTutorial, 1500); });

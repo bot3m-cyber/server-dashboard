@@ -33,8 +33,12 @@ async function loadServers() {
 function serverCard(s, anyRunning) {
   const ver = s.packName ? `${s.packName} · ${s.mcVersion || ''}` : [s.typeLabel, s.mcVersion].filter(Boolean).join(' ');
   const switchBlocked = anyRunning && !s.active;
+  // Eigenes Server-Icon (falls vorhanden), sonst das Bild des Server-Typs
+  const typeIcon = typeVisual(s.type, s.typeLabel || s.type, 'sc-icon');
+  const ownIcon = el('img', { class: 'sc-own-icon', alt: '', src: `/api/servers/${s.id}/icon?t=${ICON_STAMP}`, title: 'Server-Icon (in der Serverliste von Minecraft)' });
+  ownIcon.addEventListener('error', () => ownIcon.replaceWith(typeIcon));
   return el('div', { class: `server-card${s.active ? ' active' : ''}` },
-    typeVisual(s.type, s.typeLabel || s.type, 'sc-icon'),
+    ownIcon,
     el('div', { class: 'sc-body' },
       el('div', { class: 'sc-name' }, s.name,
         s.active ? el('span', { class: 'tag good-tag' }, s.running ? 'läuft' : 'aktiv') : null,
@@ -47,6 +51,10 @@ function serverCard(s, anyRunning) {
           class: 'btn small primary', disabled: switchBlocked, title: switchBlocked ? 'Erst den laufenden Server stoppen' : '',
           onclick: (e) => guarded(e.currentTarget, async () => { await api('POST', '/api/servers/activate', { id: s.id }); }),
         }, 'Öffnen'),
+      el('button', {
+        class: 'btn small ghost', title: 'Server-Icon ändern',
+        onclick: () => openIconDialog(`/api/servers/${s.id}`, s.name, () => { loadServers(); if (s.active) { homeInfo.iconStamp = Date.now(); } }),
+      }, 'Icon ändern'),
       el('button', {
         class: 'btn small ghost',
         onclick: (e) => guarded(e.currentTarget, async () => {

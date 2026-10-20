@@ -195,20 +195,11 @@ function renderWorldInfo() {
   dl.replaceChildren(...rows.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
 }
 
-$('#iconFile').addEventListener('change', async (e) => {
-  const f = e.target.files[0];
-  e.target.value = '';
-  if (!f) return;
-  await guarded(null, async () => {
-    const res = await fetch('/api/server/icon', { method: 'POST', headers: { 'Content-Type': 'image/png' }, body: f });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Fehler ${res.status}`);
-    homeInfo.iconStamp = Date.now();
-    $('#slpIcon').style.visibility = '';
-    $('#slpIcon').src = `/api/server/icon?t=${homeInfo.iconStamp}`;
-    toast(data.restartNeeded ? 'Icon gespeichert. Gilt nach einem Neustart.' : 'Icon gespeichert.', 'ok');
-  });
-});
+$('#btnIconChange').addEventListener('click', () => openIconDialog('/api/server', null, () => {
+  homeInfo.iconStamp = Date.now();
+  $('#slpIcon').style.visibility = '';
+  $('#slpIcon').src = `/api/server/icon?t=${homeInfo.iconStamp}`;
+}));
 $('#slpIcon').addEventListener('error', (e) => { e.target.style.visibility = 'hidden'; });
 
 // ---------------------------------------------------------------- Kopfbereich & Kennzahlen

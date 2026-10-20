@@ -100,6 +100,7 @@ function showTab(name) {
   for (const b of $$('#tabs button')) b.classList.toggle('active', b.dataset.tab === name);
   if (location.hash !== `#${name}`) history.replaceState(null, '', `#${name}`);
   Promise.resolve(loaders[name]()).catch((e) => toast(e.message, 'error'));
+  window.scrollTo(0, 0); // jede Seite beginnt oben
   if (name === 'console') scrollConsole(true);
 }
 
@@ -193,7 +194,6 @@ $('#themeAccent').addEventListener('input', (e) => { appearance.palette = 'custo
 $('#themeBackground').addEventListener('input', (e) => { appearance.palette = 'custom'; appearance.background = e.target.value; applyAppearance(); });
 $('#themePanel').addEventListener('input', (e) => { appearance.palette = 'custom'; appearance.panel = e.target.value; applyAppearance(); });
 $('#btnThemeReset').addEventListener('click', () => { appearance = { ...APPEARANCE_DEFAULT }; applyAppearance(); });
-$('#btnAppearance').addEventListener('click', () => showTab('settings'));
 applyAppearance(false);
 
 // ====================================================================== Kopfzeile / Status

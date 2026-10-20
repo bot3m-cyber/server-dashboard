@@ -54,6 +54,7 @@ const certs = require('./lib/certs');
 const listeners = require('./lib/listeners');
 const systemRoutes = require('./lib/system');
 const runstate = require('./lib/runstate');
+const servericons = require('./lib/servericons');
 
 const HOSTED = hosted.enabled();
 const PORT = netconf.get().port; // Standard 3000, einstellbar im Reiter „Netzwerk & Betrieb“ (oder per Umgebungsvariable PORT)
@@ -850,17 +851,51 @@ app.get('/api/head/:name', async (req, res) => {
 app.get('/api/activity', api(async () => ({ activity: mc.activity })));
 app.get('/api/overview', api(async () => overview.summary()));
 
-app.get('/api/server/icon', (req, res) => {
+// ---- Server-Icons: aktiver Server (/api/server/icon) und ein bestimmter Server (/api/servers/:id/icon)
+
+app.get('/api/server-icons', api(async () => ({ icons: servericons.list() })));
+app.get('/api/server-icons/:id.png', (req, res) => {
+  const png = servericons.render(String(req.params.id));
+  if (!png) return res.status(404).end();
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.type('png').send(png);
+});
+
+/** Der Server, um den es geht: der aktive (ohne id) oder ein bestimmter (nur eigene im Mehrbenutzer-Modus). */
+function iconServerId(req) {
+  if (!req.params.id) return undefined;
+  const p = config.list().find((s) => s.id === String(req.params.id));
+  if (!p || (HOSTED && !config.canAccess(req.user, p))) throw new UserError('Server nicht gefunden.', 404);
+  return p.id;
+}
+const iconRunning = (id) => (id ? mcRegistry.get(id).isRunning() : mc.isRunning());
+
+function sendIcon(req, res) {
   let p;
-  try { p = overview.iconPath(); } catch { return res.status(404).end(); }
+  try { p = overview.iconPath(iconServerId(req)); } catch { return res.status(404).end(); }
   if (!fs.existsSync(p)) return res.status(404).end();
   res.set('Cache-Control', 'no-cache');
-  res.type('png').sendFile(p);
+  return res.type('png').sendFile(p);
+}
+const saveIconRoute = api(async (req) => {
+  const id = iconServerId(req);
+  overview.saveIcon(req.body, id);
+  return { restartNeeded: iconRunning(id) };
 });
-app.post('/api/server/icon', express.raw({ type: 'image/png', limit: '300kb' }), api(async (req) => {
-  overview.saveIcon(req.body);
-  return { restartNeeded: mc.isRunning() };
-}));
+const presetIconRoute = api(async (req) => {
+  const id = iconServerId(req);
+  const png = servericons.render(String(req.body?.preset || ''));
+  if (!png) throw new UserError('Dieses Icon gibt es nicht.', 404);
+  overview.saveIcon(png, id);
+  return { restartNeeded: iconRunning(id) };
+});
+const rawPng = express.raw({ type: 'image/png', limit: '300kb' });
+app.get('/api/server/icon', sendIcon);
+app.post('/api/server/icon', rawPng, saveIconRoute);
+app.post('/api/server/icon/preset', presetIconRoute);
+app.get('/api/servers/:id/icon', sendIcon);
+app.post('/api/servers/:id/icon', rawPng, saveIconRoute);
+app.post('/api/servers/:id/icon/preset', presetIconRoute);
 
 const PLAYER_ACTIONS = {
   kick: 'kick', ban: 'ban', pardon: 'pardon', op: 'op', deop: 'deop',

@@ -19,7 +19,6 @@
     </div>
     <div class="controls">
       <div id="userMenu" class="user-menu" hidden></div>
-      <button id="btnAppearance" class="btn icon-btn" title="Aussehen anpassen" aria-label="Aussehen anpassen"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#settings"/></svg><span>Aussehen</span></button>
       <span id="statusPill" class="pill off" role="status">Aus</span>
       <button id="btnStart" class="btn primary">Start</button>
       <button id="btnStop" class="btn">Stopp</button>
@@ -96,7 +95,6 @@
         <button class="btn" id="qMods"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#mods"/></svg> Mod hinzufügen</button>
         <button class="btn" id="qConsole"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#console"/></svg> Konsole öffnen</button>
         <button class="btn" id="qInvite"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#players"/></svg> Freunde einladen</button>
-        <button class="btn ghost" id="qPalette" title="Befehlspalette (Strg+K)">⌘ Strg+K</button>
       </div>
 
       <div class="home-grid">
@@ -109,8 +107,8 @@
               <div class="slp-right"><div id="slpCount" class="mono">–</div><div class="slp-bars" id="slpBars"><i></i><i></i><i></i><i></i><i></i></div></div>
             </div>
             <div class="row">
-              <label class="btn small"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#image"/></svg> Server-Icon ändern<input type="file" id="iconFile" accept="image/png" hidden></label>
-              <span class="muted small">PNG, genau 64 × 64 Pixel</span>
+              <button class="btn small" id="btnIconChange" type="button"><svg class="action-icon" aria-hidden="true"><use href="assets/icons.svg#image"/></svg> Server-Icon ändern</button>
+              <span class="muted small">fünf fertige Icons oder eigenes PNG</span>
             </div>
             <div class="addr-row"><span class="muted small">Adresse im WLAN</span><b class="mono" id="tileAddr">–</b><button class="btn small ghost" id="btnCopyAddr">Kopieren</button></div>
           </div>
@@ -902,5 +900,6 @@
   <script src="tutorial.js"></script>
   <script src="hosted.js"></script>
   <script src="system.js"></script>
+  <script src="servericon.js"></script>
 </body>
 </html>

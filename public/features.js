@@ -274,4 +274,3 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palette.open ? closePalette() : openPalette(); }
   else if (e.key === 'Escape' && palette.open) closePalette();
 });
-$('#qPalette').addEventListener('click', openPalette);
