@@ -3,18 +3,37 @@
 
 // Zeigt Fehler beim Laden sichtbar an (auf dem Handy gibt es keine Konsole). Verschwindet, sobald die Seite fertig aufgebaut ist.
 (function bootGuard() {
-  const show = (msg) => {
+  const errors = [];
+  const render = () => {
     const box = document.getElementById('bootMsg');
     if (!box) return; // Seite läuft schon, einzelne Fehler zeigen die Meldungen unten
     box.hidden = false;
     box.classList.add('error');
-    box.textContent = `Die Seite konnte nicht vollständig geladen werden: ${msg}. Bitte neu laden (bei hartnäckigen Fällen: Browser-Cache leeren). Falls es bleibt, schick diese Meldung an den Betreiber.`;
+    box.replaceChildren();
+    const p = document.createElement('div');
+    p.textContent = 'Die Seite konnte nicht vollständig geladen werden. Fehler (der erste ist meist die Ursache):';
+    const ul = document.createElement('ul');
+    for (const m of errors.slice(0, 4)) { const li = document.createElement('li'); li.textContent = m; ul.append(li); }
+    const hint = document.createElement('div');
+    hint.textContent = 'Oft hilft es, die zwischengespeicherten Daten dieser Seite zu löschen:';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn small';
+    btn.textContent = 'Zurücksetzen und neu laden';
+    btn.addEventListener('click', async () => {
+      try { localStorage.clear(); sessionStorage.clear(); } catch { /* nicht möglich */ }
+      try { if (window.caches) for (const k of await caches.keys()) await caches.delete(k); } catch { /* nicht möglich */ }
+      try { await Promise.all([...document.querySelectorAll('script[src],link[rel=stylesheet]')].map((n) => fetch(n.src || n.href, { cache: 'reload' }))); } catch { /* egal */ }
+      location.reload();
+    });
+    box.append(p, ul, hint, btn);
   };
-  window.addEventListener('error', (e) => show(`${e.message || 'Fehler'}${e.filename ? ` (${String(e.filename).split('/').pop()}:${e.lineno})` : ''}`));
-  window.addEventListener('unhandledrejection', (e) => show(String(e.reason?.message || e.reason || 'Fehler')));
+  const add = (msg) => { if (!errors.includes(msg)) errors.push(msg); render(); };
+  window.addEventListener('error', (e) => add(`${e.message || 'Fehler'}${e.filename ? ` (${String(e.filename).split('/').pop().split('?')[0]}:${e.lineno})` : ''}`));
+  window.addEventListener('unhandledrejection', (e) => add(String(e.reason?.message || e.reason || 'Fehler')));
   setTimeout(() => {
     const box = document.getElementById('bootMsg');
-    if (box && !box.classList.contains('error')) { box.classList.add('error'); box.textContent = 'Das Dashboard antwortet nicht. Bitte die Verbindung prüfen und die Seite neu laden.'; }
+    if (box && !box.classList.contains('error')) { errors.push('Das Dashboard antwortet nicht. Bitte die Verbindung prüfen.'); render(); }
   }, 12000);
 })();
 
@@ -170,8 +189,12 @@ function paletteSurface(palette, mode) {
 }
 
 function storedAppearance() {
-  try { return { ...APPEARANCE_DEFAULT, ...JSON.parse(localStorage.getItem(APPEARANCE_KEY) || '{}') }; }
-  catch { return { ...APPEARANCE_DEFAULT }; }
+  try {
+    const a = { ...APPEARANCE_DEFAULT, ...JSON.parse(localStorage.getItem(APPEARANCE_KEY) || '{}') };
+    // Beschädigte Werte (z. B. aus einer älteren Version) ersetzen, damit die Seite nie daran scheitert
+    const col = (v, d) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v : d);
+    return { mode: a.mode === 'light' ? 'light' : 'dark', palette: typeof a.palette === 'string' ? a.palette : 'green', accent: col(a.accent, APPEARANCE_DEFAULT.accent), background: col(a.background, APPEARANCE_DEFAULT.background), panel: col(a.panel, APPEARANCE_DEFAULT.panel) };
+  } catch { return { ...APPEARANCE_DEFAULT }; }
 }
 
 let appearance = storedAppearance();
@@ -196,7 +219,7 @@ function applyAppearance(save = true) {
   root.style.setProperty('--panel', appearance.panel);
   root.style.setProperty('--panel-2', appearance.mode === 'light' ? '#f4f7f5' : shade(appearance.panel, 7));
   root.style.setProperty('--border', appearance.mode === 'light' ? '#cbd7cf' : shade(appearance.panel, 26));
-  if (save) localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance));
+  if (save) { try { localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance)); } catch { /* Speicher nicht verfügbar */ } }
   syncAppearanceControls();
 }
 
@@ -218,7 +241,7 @@ $('#themeAccent').addEventListener('input', (e) => { appearance.palette = 'custo
 $('#themeBackground').addEventListener('input', (e) => { appearance.palette = 'custom'; appearance.background = e.target.value; applyAppearance(); });
 $('#themePanel').addEventListener('input', (e) => { appearance.palette = 'custom'; appearance.panel = e.target.value; applyAppearance(); });
 $('#btnThemeReset').addEventListener('click', () => { appearance = { ...APPEARANCE_DEFAULT }; applyAppearance(); });
-applyAppearance(false);
+try { applyAppearance(false); } catch (e) { console.error('Aussehen konnte nicht angewendet werden', e); appearance = { ...APPEARANCE_DEFAULT }; }
 
 // ====================================================================== Kopfzeile / Status
 

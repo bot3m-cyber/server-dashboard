@@ -158,7 +158,7 @@ if (HOSTED) {
   authRoutes.mountPublic(app);
   app.get('/login', (req, res) => (req.user ? res.redirect('/') : res.sendFile(path.join(PUBLIC_DIR, 'login.html'))));
   app.use((req, res, next) => {
-    if (PUBLIC_PAGES.has(req.path) || req.path.startsWith('/assets/')) return express.static(PUBLIC_DIR)(req, res, next);
+    if (PUBLIC_PAGES.has(req.path) || req.path.startsWith('/assets/')) return express.static(PUBLIC_DIR, { setHeaders: (r) => r.setHeader('Cache-Control', 'no-cache') })(req, res, next);
     if (req.user) return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Bitte melde dich an.', code: 'LOGIN' });
     return res.redirect('/login');
@@ -189,7 +189,16 @@ if (!HOSTED) {
   app.use(access.middleware);
 }
 app.use('/icons', express.static(modmeta.ICON_DIR, { maxAge: '7d', fallthrough: true }));
-app.use(express.static(PUBLIC_DIR, { index: 'index.html' }));
+// Die Startseite bekommt Versionsnummern an allen Dateien und wird nie zwischengespeichert. Alle Dateien müssen vor der Nutzung
+// beim Server nachfragen (ETag), damit Browser nach einem Update nie alte und neue Dateien mischen.
+const staticOpts = { index: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
+app.get(['/', '/index.html'], (req, res, next) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.type('html').send(require('./lib/assets').indexHtml());
+  } catch (e) { next(e); }
+});
+app.use(express.static(PUBLIC_DIR, staticOpts));
 if (HOSTED) authRoutes.mountApi(app);
 systemRoutes.mount(app, HOSTED, { startedAt: STARTED_AT });
 
