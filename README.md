@@ -66,7 +66,7 @@ Alle Einstellungen liegen im Ordner `data/` und stehen in `.gitignore`. `update.
 
 ## Sprachen
 
-Das Dashboard gibt es auf Deutsch und Englisch (Einstellungen → Sprache). Eine Sprache ist nur eine Datei: `public/lang/<code>.json` (kommt mit Updates) oder `data/lang/<code>.json` (eigene Sprachen und Anpassungen, bleiben bei Updates erhalten). Schlüssel ist der deutsche Originaltext, der Wert die Übersetzung; fehlende Sätze bleiben deutsch. Neue Sprache: `en.json` nach `data/lang/fr.json` kopieren, `_meta` anpassen, Werte übersetzen, Seite neu laden. „Fehlende Sätze exportieren“ in den Einstellungen liefert eine Vorlage. Impressum und Datenschutz haben eigene Dateien in `legal/` (`data/legal/` geht vor).
+Das Dashboard gibt es auf Deutsch und Englisch (Einstellungen → Sprache). Eine Sprache ist nur eine Datei: `public/lang/<code>.json` (kommt mit Updates) oder `data/lang/<code>.json` (eigene Sprachen und Anpassungen, bleiben bei Updates erhalten). Schlüssel ist der deutsche Originaltext, der Wert die Übersetzung; fehlende Sätze bleiben deutsch. Neue Sprache: `en.json` nach `data/lang/fr.json` kopieren, `_meta` anpassen, Werte übersetzen, Seite neu laden. „Fehlende Sätze exportieren“ in den Einstellungen liefert eine Vorlage. Impressum und Datenschutz haben eigene Dateien in `lib/legaltext/` (`data/legal/` geht vor).
 
 ## Impressum und Datenschutz
 

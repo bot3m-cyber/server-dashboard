@@ -45,6 +45,12 @@ main() {
     # Programmordner ersetzen (enthalten nur Code), übrige Dateien im Hauptordner überschreiben
     rm -rf lib public
     cp -a "$src/lib" "$src/public" .
+    # weitere Programmordner (außer Benutzerdaten) mitnehmen
+    for d in "$src"/*/; do
+      n="$(basename "$d")"
+      case "$n" in lib|public|data|data-mehrbenutzer|server|servers|servers-mehrbenutzer|node_modules|.git) continue ;; esac
+      rm -rf "./$n"; cp -a "$d" "./$n"
+    done
     for f in "$src"/* "$src"/.gitignore "$src"/.gitattributes; do
       [ -f "$f" ] || continue
       case "$(basename "$f")" in update.sh) continue ;; esac
