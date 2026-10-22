@@ -1777,6 +1777,7 @@
   "Neue Version verfügbar ({0} Änderung(en)). Klicken zum Aktualisieren. Stand {1}": "New version available ({0} change(s)). Click to update. State {1}",
   "Neue Version verfügbar ({0} Änderung(en)). Klicken zum Aktualisieren.": "New version available ({0} change(s)). Click to update.",
   "Version des Dashboards. Stand {0}": "Dashboard version. State {0}",
-  "Version des Dashboards.": "Dashboard version."
+  "Version des Dashboards.": "Dashboard version.",
+  "← Einstellungen": "← Settings"
  }
 }

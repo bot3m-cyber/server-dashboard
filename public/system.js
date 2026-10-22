@@ -343,8 +343,8 @@ function legalCard(d) {
         class: 'btn primary', type: 'button',
         onclick: (e) => guarded(e.currentTarget, async () => { await api('POST', '/api/system/legal', { operator: name.value }); toast('Gespeichert.', 'ok'); loadSystem(); }),
       }, 'Speichern'),
-      el('a', { class: 'btn', href: '/impressum', 'data-legal': '', target: '_blank', rel: 'noopener' }, 'Impressum ansehen'),
-      el('a', { class: 'btn', href: '/datenschutz', 'data-legal': '', target: '_blank', rel: 'noopener' }, 'Datenschutz ansehen')),
+      el('a', { class: 'btn', href: '#impressum', 'data-goto': 'impressum' }, 'Impressum ansehen'),
+      el('a', { class: 'btn', href: '#datenschutz', 'data-goto': 'datenschutz' }, 'Datenschutz ansehen')),
     el('p', { class: 'muted small' }, 'Eigene Texte: Lege Dateien gleichen Namens in data/legal/ ab (impressum.de.html, impressum.en.html, datenschutz.de.html, datenschutz.en.html). Sie gehen vor und bleiben bei Updates erhalten. Hinweis: Das sind Vorlagen für ein privates Projekt, keine Rechtsberatung.'));
 }
 
@@ -468,9 +468,37 @@ function setNavVersion(up) {
     const a = el('a', { href: URL.createObjectURL(new Blob([txt], { type: 'application/json' })), download: `missing-${I18N.lang}.json` });
     document.body.append(a); a.click(); a.remove();
   });
-  // Impressum und Datenschutz in der gewählten Sprache öffnen
+})();
+
+// ---------------------------------------------------------------- Impressum und Datenschutz als Seiten im Dashboard
+(function installLegalTabs() {
+  let lang = (window.I18N && I18N.lang === 'en') ? 'en' : 'de';
+  const pages = ['impressum', 'datenschutz'];
+  const load = async (page) => {
+    const box = document.getElementById(`legalBody-${page}`);
+    box.textContent = '…';
+    const c = await api('GET', `/api/legal/${page}?lang=${lang}`);
+    box.innerHTML = c.html;
+    box.lang = c.lang;
+    box.querySelectorAll('a[href^="http"]').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
+    box.querySelectorAll('a[href^="/impressum"], a[href^="/datenschutz"]').forEach((a) => { a.dataset.goto = a.getAttribute('href').slice(1).split('?')[0]; });
+  };
+  for (const page of pages) {
+    const other = pages.find((p) => p !== page);
+    const nav = el('div', { class: 'legal-nav' },
+      el('a', { href: '#settings', 'data-goto': 'settings' }, '← Einstellungen'),
+      el('span', {},
+        el('a', { href: `#${other}`, 'data-goto': other }, other === 'impressum' ? 'Impressum' : 'Datenschutz'),
+        ' · ',
+        el('a', { href: '#', onclick: (e) => { e.preventDefault(); lang = lang === 'de' ? 'en' : 'de'; load(page).catch((er) => toast(er.message, 'error')); } }, 'Deutsch / English')));
+    $('main').append(el('section', { id: `tab-${page}`, class: 'tab', hidden: true },
+      el('div', { class: 'card legal-inline' }, nav, el('article', { id: `legalBody-${page}`, 'data-no-i18n': '' }))));
+    loaders[page] = () => load(page);
+  }
   document.addEventListener('click', (e) => {
-    const a = e.target.closest && e.target.closest('a[data-legal]');
-    if (a && I18N.lang !== 'de') a.href = `${a.getAttribute('href').split('?')[0]}?lang=${I18N.lang}`;
+    const a = e.target.closest && e.target.closest('[data-goto]');
+    if (!a) return;
+    e.preventDefault();
+    showTab(a.dataset.goto);
   });
 })();
