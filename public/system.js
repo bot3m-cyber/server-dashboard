@@ -376,6 +376,7 @@ function renderSystem(d, up) {
 async function loadSystem() {
   const [d, up] = await Promise.all([api('GET', '/api/system'), api('GET', '/api/update').catch(() => null)]);
   renderSystem(d, up);
+  if (up) setNavVersion(up);
 }
 
 (function installSystemTab() {
@@ -413,11 +414,34 @@ async function loadSystem() {
   } catch { /* Zugriff verweigert oder nicht verfügbar: dann gibt es nichts anzuzeigen */ }
 })();
 
-// Version in der Fußzeile und Hinweis auf neue Versionen (nur für Administratoren sichtbar, die Abfrage selbst läuft ohne Netzwerkzugriff)
+// Versionsanzeige unten im Menü: Nummer, bei verfügbarem Update ein ✦ (Klick öffnet die Update-Karte)
+function setNavVersion(up) {
+  const box = document.getElementById('navVersion');
+  if (!box || !APP.semver) return;
+  const v = APP.version || {};
+  const parts = [el('span', {}, `v${APP.semver}`)];
+  if (up && up.available) parts.push(el('span', { class: 'nv-new' }, 'Update'));
+  box.replaceChildren(...parts);
+  const sha = v.sha ? ' Stand ' + v.sha : '';
+  box.title = (up && up.available ? `Neue Version verfügbar (${up.pending.length} Änderung(en)). Klicken zum Aktualisieren.` : 'Version des Dashboards.') + sha;
+  box.hidden = false;
+}
+(function navVersionInit() {
+  const box = document.getElementById('navVersion');
+  if (!box) return;
+  const open = () => { showTab('system'); document.getElementById('tabs')?.classList.remove('open'); };
+  box.addEventListener('click', open);
+  box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+})();
+
+// Hinweis auf neue Versionen (nur für Administratoren sichtbar, die Abfrage selbst läuft ohne Netzwerkzugriff) auf neue Versionen (nur für Administratoren sichtbar, die Abfrage selbst läuft ohne Netzwerkzugriff)
 (async function updateNotice() {
   try {
     await APP.ready;
+    setNavVersion(null);
     const up = await api('GET', '/api/update');
+    setNavVersion(up);
+    setInterval(() => api('GET', '/api/update').then(setNavVersion).catch(() => {}), 30 * 60 * 1000);
     if (!up.available) return;
     const key = `updHidden:${up.latest?.sha}`;
     if (sessionStorage.getItem(key)) return;

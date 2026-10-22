@@ -750,3 +750,11 @@ kbd { display: inline-block; padding: 1px 6px; border: 1px solid var(--border); 
 
 /* Sprachdatei wird geladen: Seite kurz ausblenden, damit nichts halb deutsch aufblitzt */
 html.i18n-loading body { visibility: hidden; }
+
+/* Version unten im Menü */
+.nav-version { margin-top: auto; padding: 14px 12px 2px; font-size: .78rem; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; user-select: none; }
+.nav-version:hover { color: var(--text); }
+.nav-version .nv-new { color: var(--accent); font-weight: 600; }
+.nav-version .nv-new::before { content: "✦ "; }
+@media (max-width: 959px) { .tabs .nav-version { flex: 0 0 auto; } }
+@media (min-width: 960px) { .tabs { min-height: 0; } }

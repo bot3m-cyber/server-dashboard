@@ -340,7 +340,7 @@ mcRegistry.onCreate((inst) => {
 
 app.get('/api/app-info', api(async () => {
   const v = await require('./lib/updater').installed().catch(() => null);
-  return { hosted: HOSTED, platform: process.platform, version: v ? { sha: v.sha ? v.sha.slice(0, 7) : null, dateMs: v.dateMs || null, kind: v.kind } : null };
+  return { hosted: HOSTED, platform: process.platform, semver: require('./package.json').version, version: v ? { sha: v.sha ? v.sha.slice(0, 7) : null, dateMs: v.dateMs || null, kind: v.kind } : null };
 }));
 
 app.get('/api/setup', api(async () => {

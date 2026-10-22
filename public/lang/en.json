@@ -1773,6 +1773,10 @@
   "Mindestens 10 Zeichen. Nimm etwas, das man nicht erraten kann.": "At least 10 characters. Use something that cannot be guessed.",
   "Neue Konten können gerade nicht erstellt werden.": "New accounts cannot be created right now.",
   "Deine Server gehören nur dir. Andere Benutzer können sie weder sehen noch ändern.": "Your servers belong only to you. Other users can neither see nor change them.",
-  "Rechtliches:": "Legal:"
+  "Rechtliches:": "Legal:",
+  "Neue Version verfügbar ({0} Änderung(en)). Klicken zum Aktualisieren. Stand {1}": "New version available ({0} change(s)). Click to update. State {1}",
+  "Neue Version verfügbar ({0} Änderung(en)). Klicken zum Aktualisieren.": "New version available ({0} change(s)). Click to update.",
+  "Version des Dashboards. Stand {0}": "Dashboard version. State {0}",
+  "Version des Dashboards.": "Dashboard version."
  }
 }
