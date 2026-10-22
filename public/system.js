@@ -420,10 +420,11 @@ function setNavVersion(up) {
   if (!box || !APP.semver) return;
   const v = APP.version || {};
   const parts = [el('span', {}, `v${APP.semver}`)];
-  if (up && up.available) parts.push(el('span', { class: 'nv-new' }, 'Update'));
+  if (APP.restartNeeded) parts.push(el('span', { class: 'nv-new' }, 'Neustart nötig'));
+  else if (up && up.available) parts.push(el('span', { class: 'nv-new' }, 'Update'));
   box.replaceChildren(...parts);
   const sha = v.sha ? ' Stand ' + v.sha : '';
-  box.title = (up && up.available ? `Neue Version verfügbar (${up.pending.length} Änderung(en)). Klicken zum Aktualisieren.` : 'Version des Dashboards.') + sha;
+  box.title = APP.restartNeeded ? 'Das Dashboard wurde aktualisiert, läuft aber noch mit dem alten Stand. Klicken, dann unter „Neustart und Speicherort“ neu starten.' + sha : (up && up.available ? `Neue Version verfügbar (${up.pending.length} Änderung(en)). Klicken zum Aktualisieren.` : 'Version des Dashboards.') + sha;
   box.hidden = false;
 }
 (function navVersionInit() {
@@ -477,7 +478,17 @@ function setNavVersion(up) {
   const load = async (page) => {
     const box = document.getElementById(`legalBody-${page}`);
     box.textContent = '…';
-    const c = await api('GET', `/api/legal/${page}?lang=${lang}`);
+    let c;
+    try {
+      c = await api('GET', `/api/legal/${page}?lang=${lang}`);
+    } catch {
+      // Ältere Serverversion (noch nicht neu gestartet): die Einzelseite laden und den Text daraus übernehmen
+      const res = await fetch(`/${page}?lang=${lang}`, { cache: 'no-store' });
+      const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+      const art = doc.querySelector('article');
+      if (!art) { box.textContent = 'Die Seite konnte nicht geladen werden. Bitte das Dashboard neu starten.'; return; }
+      c = { html: art.innerHTML, lang };
+    }
     box.innerHTML = c.html;
     box.lang = c.lang;
     box.querySelectorAll('a[href^="http"]').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });

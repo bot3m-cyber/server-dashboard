@@ -338,9 +338,12 @@ mcRegistry.onCreate((inst) => {
 
 // ---------------------------------------------------------------- Einrichtung
 
+// Stand der Programmdateien beim Start: weicht er später ab, wurde aktualisiert, ohne dass das Dashboard neu gestartet wurde
+let BOOT_SHA = null;
+require('./lib/updater').installed().then((v) => { BOOT_SHA = v.sha || null; }).catch(() => {});
 app.get('/api/app-info', api(async () => {
   const v = await require('./lib/updater').installed().catch(() => null);
-  return { hosted: HOSTED, platform: process.platform, semver: require('./package.json').version, version: v ? { sha: v.sha ? v.sha.slice(0, 7) : null, dateMs: v.dateMs || null, kind: v.kind } : null };
+  return { restartNeeded: !!(BOOT_SHA && v && v.sha && v.sha !== BOOT_SHA), hosted: HOSTED, platform: process.platform, semver: require('./package.json').version, version: v ? { sha: v.sha ? v.sha.slice(0, 7) : null, dateMs: v.dateMs || null, kind: v.kind } : null };
 }));
 
 app.get('/api/setup', api(async () => {

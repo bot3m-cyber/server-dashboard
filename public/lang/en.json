@@ -1778,6 +1778,10 @@
   "Neue Version verfügbar ({0} Änderung(en)). Klicken zum Aktualisieren.": "New version available ({0} change(s)). Click to update.",
   "Version des Dashboards. Stand {0}": "Dashboard version. State {0}",
   "Version des Dashboards.": "Dashboard version.",
-  "← Einstellungen": "← Settings"
+  "← Einstellungen": "← Settings",
+  "Neustart nötig": "Restart needed",
+  "Das Dashboard wurde aktualisiert, läuft aber noch mit dem alten Stand. Klicken, dann unter „Neustart und Speicherort“ neu starten.": "The dashboard was updated but is still running the old version. Click, then restart under “Restart and storage location”.",
+  "Das Dashboard wurde aktualisiert, läuft aber noch mit dem alten Stand. Klicken, dann unter „Neustart und Speicherort“ neu starten. Stand {0}": "The dashboard was updated but is still running the old version. Click, then restart under “Restart and storage location”. State {0}",
+  "Die Seite konnte nicht geladen werden. Bitte das Dashboard neu starten.": "The page could not be loaded. Please restart the dashboard."
  }
 }
