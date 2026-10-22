@@ -417,8 +417,6 @@ async function loadSystem() {
 (async function updateNotice() {
   try {
     await APP.ready;
-    if (APP.version?.sha) $('#footVersion').textContent = `· Version ${APP.version.sha}`;
-    else if (APP.version?.dateMs) $('#footVersion').textContent = `· Stand ${new Date(APP.version.dateMs).toLocaleDateString('de-DE')}`;
     const up = await api('GET', '/api/update');
     if (!up.available) return;
     const key = `updHidden:${up.latest?.sha}`;
